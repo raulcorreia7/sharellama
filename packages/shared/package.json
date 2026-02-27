@@ -12,6 +12,14 @@
     "./schemas/submission": {
       "import": "./dist/schemas/submission.js",
       "types": "./dist/schemas/submission.d.ts"
+    },
+    "./schemas/vote": {
+      "import": "./dist/schemas/vote.js",
+      "types": "./dist/schemas/vote.d.ts"
+    },
+    "./schemas/comment": {
+      "import": "./dist/schemas/comment.js",
+      "types": "./dist/schemas/comment.d.ts"
     }
   },
   "scripts": {

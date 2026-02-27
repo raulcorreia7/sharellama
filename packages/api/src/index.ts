@@ -5,6 +5,8 @@ import type { Env } from "./env";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
 import submissionsRoutes from "./routes/submissions";
+import votesRoutes from "./routes/votes";
+import { submissionCommentsRoutes, commentsRoutes } from "./routes/comments";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -51,5 +53,8 @@ app.get("/test/rate-limit", testRateLimit, (c) => {
 });
 
 app.route("/submissions", submissionsRoutes);
+app.route("/submissions", votesRoutes);
+app.route("/submissions", submissionCommentsRoutes);
+app.route("/comments", commentsRoutes);
 
 export default app;

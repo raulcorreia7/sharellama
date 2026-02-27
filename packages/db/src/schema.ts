@@ -82,3 +82,19 @@ export const comments = pgTable("comments", {
   score: integer("score").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const commentVotes = pgTable(
+  "comment_votes",
+  {
+    id: serial("id").primaryKey(),
+    voterHash: varchar("voter_hash", { length: 64 }).notNull(),
+    commentId: integer("comment_id")
+      .references(() => comments.id)
+      .notNull(),
+    value: smallint("value").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    voterCommentUnique: unique().on(table.voterHash, table.commentId),
+  }),
+);

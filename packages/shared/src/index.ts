@@ -80,3 +80,5 @@ export interface ApiError {
 }
 
 export * from "./schemas/submission.js";
+export * from "./schemas/vote.js";
+export * from "./schemas/comment.js";
