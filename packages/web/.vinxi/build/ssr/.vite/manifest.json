@@ -1,0 +1,124 @@
+{
+  "_api-CCEBlp7o.js": {
+    "file": "assets/api-CCEBlp7o.js",
+    "name": "api"
+  },
+  "_components-VICL5DSv.js": {
+    "file": "assets/components-VICL5DSv.js",
+    "name": "components",
+    "imports": [
+      "_routing-Ba1_hemW.js"
+    ]
+  },
+  "_index-Dps0aSs2.js": {
+    "file": "assets/index-Dps0aSs2.js",
+    "name": "index"
+  },
+  "_index-L33o0EUv.js": {
+    "file": "assets/index-L33o0EUv.js",
+    "name": "index"
+  },
+  "_routing-Ba1_hemW.js": {
+    "file": "assets/routing-Ba1_hemW.js",
+    "name": "routing"
+  },
+  "src/routes/detect.tsx?pick=default&pick=$css": {
+    "file": "detect.js",
+    "name": "detect",
+    "src": "src/routes/detect.tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js"
+    ]
+  },
+  "src/routes/index.tsx?pick=default&pick=$css": {
+    "file": "index.js",
+    "name": "index",
+    "src": "src/routes/index.tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js"
+    ]
+  },
+  "src/routes/submissions/[id].tsx?pick=default&pick=$css": {
+    "file": "_id_.js",
+    "name": "_id_",
+    "src": "src/routes/submissions/[id].tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js",
+      "_api-CCEBlp7o.js",
+      "_routing-Ba1_hemW.js"
+    ]
+  },
+  "src/routes/submissions/[id]/admin/[token].tsx?pick=default&pick=$css": {
+    "file": "_token_.js",
+    "name": "_token_",
+    "src": "src/routes/submissions/[id]/admin/[token].tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js",
+      "_index-L33o0EUv.js",
+      "_api-CCEBlp7o.js",
+      "_routing-Ba1_hemW.js",
+      "_components-VICL5DSv.js"
+    ]
+  },
+  "src/routes/submissions/index.tsx?pick=default&pick=$css": {
+    "file": "index2.js",
+    "name": "index",
+    "src": "src/routes/submissions/index.tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js",
+      "_api-CCEBlp7o.js",
+      "_components-VICL5DSv.js",
+      "_routing-Ba1_hemW.js"
+    ]
+  },
+  "src/routes/submit.tsx?pick=default&pick=$css": {
+    "file": "submit.js",
+    "name": "submit",
+    "src": "src/routes/submit.tsx?pick=default&pick=$css",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js",
+      "_index-L33o0EUv.js",
+      "_components-VICL5DSv.js",
+      "_routing-Ba1_hemW.js"
+    ]
+  },
+  "virtual:$vinxi/handler/ssr": {
+    "file": "ssr.js",
+    "name": "ssr",
+    "src": "virtual:$vinxi/handler/ssr",
+    "isEntry": true,
+    "imports": [
+      "_index-Dps0aSs2.js",
+      "_routing-Ba1_hemW.js"
+    ],
+    "dynamicImports": [
+      "src/routes/detect.tsx?pick=default&pick=$css",
+      "src/routes/detect.tsx?pick=default&pick=$css",
+      "src/routes/index.tsx?pick=default&pick=$css",
+      "src/routes/index.tsx?pick=default&pick=$css",
+      "src/routes/submissions/[id]/admin/[token].tsx?pick=default&pick=$css",
+      "src/routes/submissions/[id]/admin/[token].tsx?pick=default&pick=$css",
+      "src/routes/submissions/[id].tsx?pick=default&pick=$css",
+      "src/routes/submissions/[id].tsx?pick=default&pick=$css",
+      "src/routes/submissions/index.tsx?pick=default&pick=$css",
+      "src/routes/submissions/index.tsx?pick=default&pick=$css",
+      "src/routes/submit.tsx?pick=default&pick=$css",
+      "src/routes/submit.tsx?pick=default&pick=$css"
+    ],
+    "css": [
+      "assets/ssr-BoAtgBuB.css"
+    ]
+  }
+}

@@ -51,11 +51,11 @@ export default function Detect() {
         <p class="mb-2 text-sm text-gray-600">Run these for accurate hardware info:</p>
         <ul class="space-y-1">
           <li>
-            <a href="/detect.sh" download class="text-blue-600 hover:underline">detect.sh</a>
+            <a href="/detect.sh" class="text-blue-600 hover:underline">detect.sh</a>
             <span class="text-sm text-gray-500 ml-2">(Linux/macOS)</span>
           </li>
           <li>
-            <a href="/detect.ps1" download class="text-blue-600 hover:underline">detect.ps1</a>
+            <a href="/detect.ps1" class="text-blue-600 hover:underline">detect.ps1</a>
             <span class="text-sm text-gray-500 ml-2">(Windows)</span>
           </li>
         </ul>

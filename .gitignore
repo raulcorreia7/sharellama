@@ -31,3 +31,4 @@ coverage/
 .cache/
 .parcel-cache/
 .turbo/
+.dev.vars

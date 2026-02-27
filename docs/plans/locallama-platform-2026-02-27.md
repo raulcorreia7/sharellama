@@ -193,13 +193,13 @@ export const comments = pgTable("comments", {
 
 ### Wave 1 (Parallel)
 
-- [ ] **Task 1: Project Scaffolding & Tooling**
+- [x] **Task 1: Project Scaffolding & Tooling** ✓ 4f4ca54
   - Objective: Initialize pnpm monorepo with web, api, db, shared packages
   - Files: `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.eslintrc`, `.prettierrc`
   - Done when: `pnpm install` works, TypeScript compiles, lint passes
   - Commit: `chore: init monorepo with pnpm workspaces`
 
-- [ ] **Task 2: Database Schema & Migrations**
+- [x] **Task 2: Database Schema & Migrations** ✓ 3637b74
   - Objective: Define Drizzle schema for submissions, votes, comments
   - Files: `packages/db/src/schema.ts`, `packages/db/src/index.ts`, `drizzle.config.ts`
   - Done when: Schema defined, `drizzle-kit push` creates tables on Neon
@@ -207,13 +207,13 @@ export const comments = pgTable("comments", {
 
 ### Wave 2 (Parallel)
 
-- [ ] **Task 3: Backend Core Setup (Hono + Workers)**
+- [x] **Task 3: Backend Core Setup (Hono + Workers)** ✓ aa3a21c
   - Objective: Hono app with CORS, logging, error handling, Zod validation
   - Files: `packages/api/src/index.ts`, `packages/api/wrangler.toml`
   - Done when: `wrangler dev` starts, `/health` returns 200
   - Commit: `feat(api): init Hono server for Cloudflare Workers`
 
-- [ ] **Task 4: Frontend Core Setup (SolidStart)**
+- [x] **Task 4: Frontend Core Setup (SolidStart)** ✓ b4353e4
   - Objective: SolidStart app with Tailwind, browser fingerprinting utility
   - Files: `packages/web/src/`, `packages/web/app.config.ts`, `tailwind.config.js`
   - Done when: Dev server runs, styles apply, routes work
@@ -221,19 +221,19 @@ export const comments = pgTable("comments", {
 
 ### Wave 3 (Parallel)
 
-- [ ] **Task 5: Turnstile Integration**
+- [x] **Task 5: Turnstile Integration** ✓ 44b7757
   - Objective: Cloudflare Turnstile verification middleware
   - Files: `packages/api/src/middleware/turnstile.ts`, `packages/web/src/components/Turnstile.tsx`
   - Done when: Protected routes reject invalid tokens
   - Commit: `feat(api): add Turnstile captcha verification`
 
-- [ ] **Task 6: Rate Limiting**
+- [x] **Task 6: Rate Limiting** ✓ ff3652c
   - Objective: IP-hash based rate limiting for submissions/comments/votes
   - Files: `packages/api/src/middleware/rateLimit.ts`
   - Done when: Rate limits enforced, 429 returned on abuse
   - Commit: `feat(api): add anonymous rate limiting`
 
-- [ ] **Task 7: Hardware Detection Scripts**
+- [x] **Task 7: Hardware Detection Scripts** ✓ 24697b0
   - Objective: Shell/PowerShell scripts + browser helper for hardware detection
   - Files:
     - `packages/web/public/detect.sh`
@@ -247,13 +247,13 @@ export const comments = pgTable("comments", {
 
 ### Wave 4 (Parallel)
 
-- [ ] **Task 8: Submissions API**
+- [x] **Task 8: Submissions API** ✓ be74ceb
   - Objective: CRUD endpoints with admin token generation, edit via admin link
   - Files: `packages/api/src/routes/submissions.ts`
   - Done when: Anonymous users can submit, admin link returned, `/admin/:token` routes work
   - Commit: `feat(api): add submissions CRUD with admin tokens`
 
-- [ ] **Task 9: Submissions UI**
+- [x] **Task 9: Submissions UI** ✓ d191db6
   - Objective: List/detail pages, create/edit forms, admin link display
   - Files:
     - `packages/web/src/routes/index.tsx`
