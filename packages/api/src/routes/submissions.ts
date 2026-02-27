@@ -1,14 +1,15 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { eq, desc, asc, sql, and, gte } from "drizzle-orm";
+import { eq, desc, asc, sql, and, gte, lte, or } from "drizzle-orm";
 import type { Env } from "../env";
 import { getDb } from "../lib/db";
-import { submissions } from "@locallama/db";
+import { submissions, votes } from "@locallama/db";
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   listSubmissionsQuerySchema,
 } from "@locallama/shared/schemas/submission";
+import type { VoteValue } from "@locallama/shared/schemas/vote";
 import { rateLimitSubmission } from "../middleware/rateLimit";
 import { verifyTurnstile } from "../middleware/turnstile";
 
@@ -29,6 +30,25 @@ async function hashFingerprint(fingerprint: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function getVoterHash(c: Context<{ Bindings: Env }>): Promise<string | null> {
+  const fingerprint = c.req.header("X-Fingerprint");
+  if (!fingerprint) return null;
+  return hashFingerprint(fingerprint);
+}
+
+async function getUserVote(
+  db: ReturnType<typeof getDb>,
+  voterHash: string,
+  submissionId: number
+): Promise<VoteValue | null> {
+  const vote = await db
+    .select()
+    .from(votes)
+    .where(and(eq(votes.voterHash, voterHash), eq(votes.submissionId, submissionId)))
+    .limit(1);
+  return (vote[0]?.value as VoteValue) ?? null;
 }
 
 function sanitizeForResponse(
@@ -87,16 +107,28 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
   const db = getDb(c.env.DATABASE_URL);
   const query = c.req.valid("query");
 
-  const { page, limit, sort, order, model, gpu, cpu, quantization, runtime, minTps } = query;
+  const { page, limit, sort, order, q, model, gpu, cpu, quantization, runtime, minTps, maxTps } =
+    query;
   const offset = (page - 1) * limit;
 
   const conditions = [];
+  if (q) {
+    const searchPattern = `%${q}%`;
+    conditions.push(
+      or(
+        sql`${submissions.title} ILIKE ${searchPattern}`,
+        sql`${submissions.description} ILIKE ${searchPattern}`,
+        sql`${submissions.modelName} ILIKE ${searchPattern}`
+      )
+    );
+  }
   if (model) conditions.push(sql`${submissions.modelName} ILIKE ${`%${model}%`}`);
   if (gpu) conditions.push(sql`${submissions.gpu} ILIKE ${`%${gpu}%`}`);
   if (cpu) conditions.push(sql`${submissions.cpu} ILIKE ${`%${cpu}%`}`);
   if (quantization) conditions.push(eq(submissions.quantization, quantization));
   if (runtime) conditions.push(eq(submissions.runtime, runtime));
   if (minTps !== undefined) conditions.push(gte(submissions.tokensPerSecond, minTps));
+  if (maxTps !== undefined) conditions.push(lte(submissions.tokensPerSecond, maxTps));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -124,14 +156,82 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
 
   const total = Number(countResult[0]?.count ?? 0);
 
+  const voterHash = await getVoterHash(c);
+  type SanitizedSubmission = ReturnType<typeof sanitizeForResponse>;
+  let dataWithVotes: Array<SanitizedSubmission & { userVote?: VoteValue | null }>;
+
+  if (voterHash) {
+    const userVotes = await Promise.all(
+      results.map((r) => getUserVote(db, voterHash, r.id))
+    );
+    dataWithVotes = results.map((r, i) => ({
+      ...sanitizeForResponse(r),
+      userVote: userVotes[i],
+    }));
+  } else {
+    dataWithVotes = results.map((r) => ({
+      ...sanitizeForResponse(r),
+    }));
+  }
+
   return c.json({
-    data: results.map(sanitizeForResponse),
+    data: dataWithVotes,
     pagination: {
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit),
     },
+  });
+});
+
+app.get("/meta", async (c) => {
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [models, gpus, runtimes, quantizations] = await Promise.all([
+    db
+      .select({
+        name: submissions.modelName,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(submissions)
+      .groupBy(submissions.modelName)
+      .orderBy(desc(sql`count(*)`)),
+    db
+      .select({
+        name: submissions.gpu,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(submissions)
+      .where(sql`${submissions.gpu} IS NOT NULL`)
+      .groupBy(submissions.gpu)
+      .orderBy(desc(sql`count(*)`)),
+    db
+      .select({
+        name: submissions.runtime,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(submissions)
+      .groupBy(submissions.runtime)
+      .orderBy(desc(sql`count(*)`)),
+    db
+      .select({
+        name: submissions.quantization,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(submissions)
+      .where(sql`${submissions.quantization} IS NOT NULL`)
+      .groupBy(submissions.quantization)
+      .orderBy(desc(sql`count(*)`)),
+  ]);
+
+  return c.json({
+    models: models.filter((m) => m.name).map((m) => ({ name: m.name, count: Number(m.count) })),
+    gpus: gpus.filter((g) => g.name).map((g) => ({ name: g.name, count: Number(g.count) })),
+    runtimes: runtimes.map((r) => ({ name: r.name, count: Number(r.count) })),
+    quantizations: quantizations
+      .filter((q) => q.name)
+      .map((q) => ({ name: q.name, count: Number(q.count) })),
   });
 });
 
@@ -153,7 +253,14 @@ app.get("/:id", async (c) => {
     return c.json({ error: "Submission not found" }, 404);
   }
 
-  return c.json({ data: sanitizeForResponse(submission[0]) });
+  const voterHash = await getVoterHash(c);
+  let userVote: VoteValue | null = null;
+
+  if (voterHash) {
+    userVote = await getUserVote(db, voterHash, id);
+  }
+
+  return c.json({ data: { ...sanitizeForResponse(submission[0]), userVote } });
 });
 
 app.patch("/:id/admin/:token", zValidator("json", updateSubmissionSchema), async (c) => {
