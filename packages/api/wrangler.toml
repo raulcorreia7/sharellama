@@ -5,3 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "development"
+
+[env.production]
+name = "locallama-api"
+routes = [{ pattern = "api.localllama.io/*", zone_name = "localllama.io" }]
+[env.production.vars]
+ENVIRONMENT = "production"
