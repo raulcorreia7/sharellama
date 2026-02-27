@@ -1,3 +1,4 @@
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   pgTable,
   serial,
@@ -76,7 +77,7 @@ export const comments = pgTable("comments", {
     .references(() => submissions.id)
     .notNull(),
   authorHash: varchar("author_hash", { length: 64 }).notNull(),
-  parentId: integer("parent_id").references((): any => comments.id),
+  parentId: integer("parent_id").references((): AnyPgColumn => comments.id),
   body: text("body").notNull(),
   score: integer("score").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

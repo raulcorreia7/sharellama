@@ -17,13 +17,13 @@ Build LocalLlama - a community-driven platform for sharing, discovering, and val
 
 ## Tech Stack
 
-| Component | Technology | Free Tier |
-|-----------|------------|-----------|
-| Frontend | SolidStart + Tailwind | Cloudflare Pages |
-| Backend | Hono | Cloudflare Workers (100k req/day) |
-| Database | PostgreSQL + Drizzle ORM | Neon (512MB) |
-| Captcha | Cloudflare Turnstile | Free |
-| Detection | Shell/PowerShell scripts + Browser helper | Static files |
+| Component | Technology                                | Free Tier                         |
+| --------- | ----------------------------------------- | --------------------------------- |
+| Frontend  | SolidStart + Tailwind                     | Cloudflare Pages                  |
+| Backend   | Hono                                      | Cloudflare Workers (100k req/day) |
+| Database  | PostgreSQL + Drizzle ORM                  | Neon (512MB)                      |
+| Captcha   | Cloudflare Turnstile                      | Free                              |
+| Detection | Shell/PowerShell scripts + Browser helper | Static files                      |
 
 **Total Cost**: $0/month
 
@@ -98,88 +98,96 @@ localllama/
 ```typescript
 // packages/db/schema.ts
 
-export const submissions = pgTable('submissions', {
-  id: serial('id').primaryKey(),
-  authorHash: varchar('author_hash', { length: 64 }).notNull(),
-  editToken: varchar('edit_token', { length: 32 }).notNull(),
-  
-  title: varchar('title', { length: 200 }).notNull(),
-  description: text('description'),
-  
+export const submissions = pgTable("submissions", {
+  id: serial("id").primaryKey(),
+  authorHash: varchar("author_hash", { length: 64 }).notNull(),
+  editToken: varchar("edit_token", { length: 32 }).notNull(),
+
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+
   // Hardware
-  cpu: varchar('cpu', { length: 200 }),        // Supports multiple: "2x AMD EPYC 7763"
-  gpu: varchar('gpu', { length: 200 }),        // Supports multiple: "4x RTX 4090"
-  ramGb: integer('ram_gb'),
-  
+  cpu: varchar("cpu", { length: 200 }), // Supports multiple: "2x AMD EPYC 7763"
+  gpu: varchar("gpu", { length: 200 }), // Supports multiple: "4x RTX 4090"
+  ramGb: integer("ram_gb"),
+
   // Runtime
-  runtime: varchar('runtime', { length: 50 }).notNull(),
-  runtimeVersion: varchar('runtime_version', { length: 50 }),
-  
+  runtime: varchar("runtime", { length: 50 }).notNull(),
+  runtimeVersion: varchar("runtime_version", { length: 50 }),
+
   // Model
-  modelName: varchar('model_name', { length: 100 }).notNull(),
-  quantization: varchar('quantization', { length: 50 }),
-  contextLength: integer('context_length'),
-  
+  modelName: varchar("model_name", { length: 100 }).notNull(),
+  quantization: varchar("quantization", { length: 50 }),
+  contextLength: integer("context_length"),
+
   // Command
-  command: text('command'),
-  inferenceParams: jsonb('inference_params').$type<Record<string, unknown>>(),
-  
+  command: text("command"),
+  inferenceParams: jsonb("inference_params").$type<Record<string, unknown>>(),
+
   // Sampling Parameters
-  temperature: real('temperature'),
-  topP: real('top_p'),
-  topK: integer('top_k'),
-  minP: real('min_p'),
-  repeatPenalty: real('repeat_penalty'),
-  mirostat: smallint('mirostat'),
-  mirostatTau: real('mirostat_tau'),
-  mirostatEta: real('mirostat_eta'),
-  seed: integer('seed'),
-  
+  temperature: real("temperature"),
+  topP: real("top_p"),
+  topK: integer("top_k"),
+  minP: real("min_p"),
+  repeatPenalty: real("repeat_penalty"),
+  mirostat: smallint("mirostat"),
+  mirostatTau: real("mirostat_tau"),
+  mirostatEta: real("mirostat_eta"),
+  seed: integer("seed"),
+
   // Performance
-  tokensPerSecond: real('tokens_per_second'),
-  latencyMs: integer('latency_ms'),
-  memoryMb: integer('memory_mb'),
-  
+  tokensPerSecond: real("tokens_per_second"),
+  latencyMs: integer("latency_ms"),
+  memoryMb: integer("memory_mb"),
+
   // Tags
-  tags: jsonb('tags').$type<string[]>().default([]),
-  
-  score: integer('score').default(0).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  tags: jsonb("tags").$type<string[]>().default([]),
+
+  score: integer("score").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const votes = pgTable('votes', {
-  id: serial('id').primaryKey(),
-  voterHash: varchar('voter_hash', { length: 64 }).notNull(),
-  submissionId: integer('submission_id').references(() => submissions.id).notNull(),
-  value: smallint('value').notNull(), // -1 or 1
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
-  voterSubmissionUnique: unique().on(table.voterHash, table.submissionId),
-}));
+export const votes = pgTable(
+  "votes",
+  {
+    id: serial("id").primaryKey(),
+    voterHash: varchar("voter_hash", { length: 64 }).notNull(),
+    submissionId: integer("submission_id")
+      .references(() => submissions.id)
+      .notNull(),
+    value: smallint("value").notNull(), // -1 or 1
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    voterSubmissionUnique: unique().on(table.voterHash, table.submissionId),
+  }),
+);
 
-export const comments = pgTable('comments', {
-  id: serial('id').primaryKey(),
-  submissionId: integer('submission_id').references(() => submissions.id).notNull(),
-  authorHash: varchar('author_hash', { length: 64 }).notNull(),
-  parentId: integer('parent_id').references((): any => comments.id),
-  body: text('body').notNull(),
-  score: integer('score').default(0).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  submissionId: integer("submission_id")
+    .references(() => submissions.id)
+    .notNull(),
+  authorHash: varchar("author_hash", { length: 64 }).notNull(),
+  parentId: integer("parent_id").references((): any => comments.id),
+  body: text("body").notNull(),
+  score: integer("score").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 ```
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `packages/db/src/schema.ts` | Drizzle schema definitions |
-| `packages/shared/src/schemas/*.ts` | Zod validation schemas (shared) |
-| `packages/api/src/index.ts` | Hono app entry point |
+| File                                     | Purpose                         |
+| ---------------------------------------- | ------------------------------- |
+| `packages/db/src/schema.ts`              | Drizzle schema definitions      |
+| `packages/shared/src/schemas/*.ts`       | Zod validation schemas (shared) |
+| `packages/api/src/index.ts`              | Hono app entry point            |
 | `packages/api/src/routes/submissions.ts` | Submissions CRUD + admin tokens |
-| `packages/web/src/routes/index.tsx` | Landing page |
-| `packages/web/public/detect.sh` | Linux/macOS hardware detection |
-| `packages/web/public/detect.ps1` | Windows hardware detection |
+| `packages/web/src/routes/index.tsx`      | Landing page                    |
+| `packages/web/public/detect.sh`          | Linux/macOS hardware detection  |
+| `packages/web/public/detect.ps1`         | Windows hardware detection      |
 
 ## Tasks
 
@@ -227,7 +235,7 @@ export const comments = pgTable('comments', {
 
 - [ ] **Task 7: Hardware Detection Scripts**
   - Objective: Shell/PowerShell scripts + browser helper for hardware detection
-  - Files: 
+  - Files:
     - `packages/web/public/detect.sh`
     - `packages/web/public/detect.ps1`
     - `packages/web/src/routes/detect.tsx`
@@ -424,28 +432,28 @@ Write-Host "Copy the above to your submission!" -ForegroundColor Green
 
 ## Runtime Options
 
-| Runtime | Description |
-|---------|-------------|
-| `llama.cpp` | Original, most common |
-| `ikllama.cpp` | Apple Silicon optimized fork |
-| `llamafile` | Mozilla's portable binaries |
-| `ollama` | Easy wrapper, local API |
-| `koboldcpp` | Focus on creative writing |
-| `text-generation-webui` | Gradio UI wrapper |
-| `lmstudio` | GUI application |
-| `localai` | OpenAI-compatible API |
-| `other` | Catch-all |
+| Runtime                 | Description                  |
+| ----------------------- | ---------------------------- |
+| `llama.cpp`             | Original, most common        |
+| `ikllama.cpp`           | Apple Silicon optimized fork |
+| `llamafile`             | Mozilla's portable binaries  |
+| `ollama`                | Easy wrapper, local API      |
+| `koboldcpp`             | Focus on creative writing    |
+| `text-generation-webui` | Gradio UI wrapper            |
+| `lmstudio`              | GUI application              |
+| `localai`               | OpenAI-compatible API        |
+| `other`                 | Catch-all                    |
 
 ## Filter Dimensions
 
-| Filter | Type | Description |
-|--------|------|-------------|
-| Model | Multi-select | Llama, Mistral, Qwen, etc. |
-| Quantization | Multi-select | Q4_K_M, Q5_K_M, Q8_0, etc. |
-| GPU | Multi-select | RTX 4090, A100, CPU-only, etc. |
-| Runtime | Multi-select | llama.cpp, ollama, etc. |
-| Min tok/s | Range | Performance threshold |
-| Sort | Single | Top Rated, Newest, Fastest |
+| Filter       | Type         | Description                    |
+| ------------ | ------------ | ------------------------------ |
+| Model        | Multi-select | Llama, Mistral, Qwen, etc.     |
+| Quantization | Multi-select | Q4_K_M, Q5_K_M, Q8_0, etc.     |
+| GPU          | Multi-select | RTX 4090, A100, CPU-only, etc. |
+| Runtime      | Multi-select | llama.cpp, ollama, etc.        |
+| Min tok/s    | Range        | Performance threshold          |
+| Sort         | Single       | Top Rated, Newest, Fastest     |
 
 ## Decisions Log
 
@@ -465,14 +473,14 @@ Write-Host "Copy the above to your submission!" -ForegroundColor Green
 
 ## Estimated Timeline
 
-| Wave | Tasks | Time |
-|------|-------|------|
-| 1 | Scaffolding, Schema | 2-3h |
-| 2 | Backend/Frontend Core | 2-3h |
-| 3 | Turnstile, Rate Limit, Detection | 2-3h |
-| 4 | Submissions API + UI | 3-4h |
-| 5 | Voting, Comments, Search API | 3-4h |
-| 6 | UI Polish + Landing | 4-5h |
-| 7 | Tests | 2-3h |
-| 8 | Deployment | 1-2h |
-| **Total** | | **~20-27h** |
+| Wave      | Tasks                            | Time        |
+| --------- | -------------------------------- | ----------- |
+| 1         | Scaffolding, Schema              | 2-3h        |
+| 2         | Backend/Frontend Core            | 2-3h        |
+| 3         | Turnstile, Rate Limit, Detection | 2-3h        |
+| 4         | Submissions API + UI             | 3-4h        |
+| 5         | Voting, Comments, Search API     | 3-4h        |
+| 6         | UI Polish + Landing              | 4-5h        |
+| 7         | Tests                            | 2-3h        |
+| 8         | Deployment                       | 1-2h        |
+| **Total** |                                  | **~20-27h** |
