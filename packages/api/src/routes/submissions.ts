@@ -185,6 +185,37 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
   });
 });
 
+app.get("/stats", async (c) => {
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [submissionCount, voteStats, uniqueGpus, uniqueModels] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(submissions)
+      .then((r) => Number(r[0]?.count ?? 0)),
+    db
+      .select({ total: sql<number>`coalesce(sum(value), 0)` })
+      .from(votes)
+      .then((r) => Number(r[0]?.total ?? 0)),
+    db
+      .select({ count: sql<number>`count(distinct ${submissions.gpu})` })
+      .from(submissions)
+      .where(sql`${submissions.gpu} IS NOT NULL`)
+      .then((r) => Number(r[0]?.count ?? 0)),
+    db
+      .select({ count: sql<number>`count(distinct ${submissions.modelName})` })
+      .from(submissions)
+      .then((r) => Number(r[0]?.count ?? 0)),
+  ]);
+
+  return c.json({
+    totalSubmissions: submissionCount,
+    totalVotes: voteStats,
+    uniqueGpus,
+    uniqueModels,
+  });
+});
+
 app.get("/meta", async (c) => {
   const db = getDb(c.env.DATABASE_URL);
 

@@ -104,6 +104,20 @@ class ApiClient {
     return this.request<FilterMeta>("/submissions/meta");
   }
 
+  async getStats(): Promise<{
+    totalSubmissions: number;
+    totalVotes: number;
+    uniqueGpus: number;
+    uniqueModels: number;
+  }> {
+    return this.request<{
+      totalSubmissions: number;
+      totalVotes: number;
+      uniqueGpus: number;
+      uniqueModels: number;
+    }>("/submissions/stats");
+  }
+
   async getSubmission(id: number): Promise<Submission> {
     return this.request<Submission>(`/submissions/${id}`);
   }
