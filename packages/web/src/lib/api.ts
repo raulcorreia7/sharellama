@@ -2,7 +2,6 @@ import type {
   Submission,
   SubmissionInput,
   SubmissionUpdate,
-  PaginatedResponse,
   ApiError,
 } from "@locallama/shared";
 import type { VoteValue, CreateVoteInput } from "@locallama/shared/schemas/vote";
@@ -11,6 +10,37 @@ import type {
   CreateCommentInput,
   VoteCommentInput,
 } from "@locallama/shared/schemas/comment";
+
+export interface FilterMeta {
+  models: Array<{ name: string; count: number }>;
+  gpus: Array<{ name: string; count: number }>;
+  runtimes: Array<{ name: string; count: number }>;
+  quantizations: Array<{ name: string; count: number }>;
+}
+
+export interface SubmissionFilters {
+  q?: string;
+  page?: number;
+  limit?: number;
+  sort?: "score" | "createdAt" | "tokensPerSecond";
+  order?: "asc" | "desc";
+  model?: string[];
+  gpu?: string[];
+  cpu?: string;
+  quantization?: string[];
+  runtime?: string[];
+  minTps?: number;
+}
+
+export interface SubmissionsListResponse {
+  data: Array<Submission & { userVote?: VoteValue | null }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -44,13 +74,34 @@ class ApiClient {
     return response.json();
   }
 
-  async getSubmissions(
-    page = 1,
-    pageSize = 20
-  ): Promise<PaginatedResponse<Submission>> {
-    return this.request<PaginatedResponse<Submission>>(
-      `/submissions?page=${page}&pageSize=${pageSize}`
-    );
+  async getSubmissions(filters: SubmissionFilters = {}): Promise<SubmissionsListResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.q) params.set("q", filters.q);
+    params.set("page", String(filters.page ?? 1));
+    params.set("limit", String(filters.limit ?? 20));
+    params.set("sort", filters.sort ?? "createdAt");
+    params.set("order", filters.order ?? "desc");
+    if (filters.model && filters.model.length > 0) {
+      filters.model.forEach((m) => params.append("model", m));
+    }
+    if (filters.gpu && filters.gpu.length > 0) {
+      filters.gpu.forEach((g) => params.append("gpu", g));
+    }
+    if (filters.cpu) params.set("cpu", filters.cpu);
+    if (filters.quantization && filters.quantization.length > 0) {
+      filters.quantization.forEach((q) => params.append("quantization", q));
+    }
+    if (filters.runtime && filters.runtime.length > 0) {
+      filters.runtime.forEach((r) => params.append("runtime", r));
+    }
+    if (filters.minTps !== undefined) params.set("minTps", String(filters.minTps));
+
+    return this.request<SubmissionsListResponse>(`/submissions?${params.toString()}`);
+  }
+
+  async getSubmissionsMeta(): Promise<FilterMeta> {
+    return this.request<FilterMeta>("/submissions/meta");
   }
 
   async getSubmission(id: number): Promise<Submission> {
