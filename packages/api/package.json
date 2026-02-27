@@ -8,20 +8,24 @@
     "typecheck": "tsc --noEmit",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "clean": "rm -rf dist .wrangler"
+    "clean": "rm -rf dist .wrangler",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
     "@locallama/db": "workspace:*",
     "@locallama/shared": "workspace:*",
-    "drizzle-orm": "^0.40.0",
     "hono": "^4.7.4",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.13.10",
+    "drizzle-orm": "^0.40.1",
+    "sql.js": "^1.14.0",
     "typescript": "^5.8.2",
+    "vitest": "^4.0.18",
     "wrangler": "^3.114.0"
   }
 }
