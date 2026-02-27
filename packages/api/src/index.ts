@@ -2,6 +2,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { Hono } from "hono";
 import type { Env } from "./env";
+import { verifyTurnstile } from "./middleware/turnstile";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -11,7 +12,7 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Turnstile-Token"],
   })
 );
 
@@ -34,5 +35,9 @@ app.get("/health", (c) => {
 });
 
 app.get("/", (c) => c.json({ status: "ok" }));
+
+app.post("/test/turnstile", verifyTurnstile(), (c) => {
+  return c.json({ verified: true });
+});
 
 export default app;
