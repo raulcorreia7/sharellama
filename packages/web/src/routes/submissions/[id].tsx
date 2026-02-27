@@ -1,7 +1,10 @@
 import { Title } from "@solidjs/meta";
-import { createResource, Show, Suspense, type JSX } from "solid-js";
+import { createResource, createSignal, Show, Suspense, type JSX, onMount } from "solid-js";
 import { useParams } from "@solidjs/router";
 import { api } from "../../lib/api";
+import { generateFingerprint } from "../../lib/fingerprint";
+import { VoteButtons } from "../../components/VoteButtons";
+import { CommentThread } from "../../components/CommentThread";
 
 function CopyButton(props: { text: string }) {
   const handleCopy = async () => {
@@ -61,6 +64,12 @@ function timeAgo(date: string): string {
 export default function SubmissionDetail() {
   const params = useParams();
   const id = () => Number(params.id);
+  const [fingerprint, setFingerprint] = createSignal("");
+
+  onMount(async () => {
+    const fp = await generateFingerprint();
+    setFingerprint(fp);
+  });
 
   const [submission] = createResource(id, (i) => api.getSubmission(i));
 
@@ -102,21 +111,19 @@ export default function SubmissionDetail() {
               </div>
             </header>
 
-            <div class="mb-6 flex gap-2">
-              <button
-                type="button"
-                class="rounded p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                aria-label="Upvote"
+            <div class="mb-6">
+              <Show
+                when={fingerprint()}
+                fallback={
+                  <div class="text-sm text-gray-400">Loading vote controls...</div>
+                }
               >
-                ▲
-              </button>
-              <button
-                type="button"
-                class="rounded p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                aria-label="Downvote"
-              >
-                ▼
-              </button>
+                <VoteButtons
+                  submissionId={s().id}
+                  initialScore={s().score}
+                  fingerprint={fingerprint()}
+                />
+              </Show>
             </div>
 
             <Show when={s().description}>
@@ -185,14 +192,21 @@ export default function SubmissionDetail() {
               </Show>
             </div>
 
-            <section class="mt-8">
-              <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                Comments
-              </h2>
-              <p class="text-gray-500 dark:text-gray-400">
-                Comments coming soon...
-              </p>
-            </section>
+            <Show
+              when={fingerprint()}
+              fallback={
+                <section class="mt-8">
+                  <p class="text-gray-500 dark:text-gray-400">
+                    Loading comments...
+                  </p>
+                </section>
+              }
+            >
+              <CommentThread
+                submissionId={s().id}
+                fingerprint={fingerprint()}
+              />
+            </Show>
           </>
         )}
       </Show>

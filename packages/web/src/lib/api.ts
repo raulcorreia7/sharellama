@@ -5,6 +5,12 @@ import type {
   PaginatedResponse,
   ApiError,
 } from "@locallama/shared";
+import type { VoteValue, CreateVoteInput } from "@locallama/shared/schemas/vote";
+import type {
+  CommentNode,
+  CreateCommentInput,
+  VoteCommentInput,
+} from "@locallama/shared/schemas/comment";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -82,6 +88,88 @@ class ApiClient {
   async deleteSubmission(id: number, token: string): Promise<void> {
     return this.request<void>(`/submissions/${id}?token=${token}`, {
       method: "DELETE",
+    });
+  }
+
+  async voteSubmission(
+    submissionId: number,
+    value: VoteValue,
+    fingerprint: string
+  ): Promise<{ score: number; userVote: VoteValue | null }> {
+    return this.request<{ score: number; userVote: VoteValue | null }>(
+      `/submissions/${submissionId}/vote`,
+      {
+        method: "POST",
+        body: JSON.stringify({ value } as CreateVoteInput),
+        headers: {
+          "X-Fingerprint": fingerprint,
+        },
+      }
+    );
+  }
+
+  async getSubmissionVote(
+    submissionId: number,
+    fingerprint: string
+  ): Promise<{ value: VoteValue | null }> {
+    return this.request<{ value: VoteValue | null }>(
+      `/submissions/${submissionId}/vote`,
+      {
+        headers: {
+          "X-Fingerprint": fingerprint,
+        },
+      }
+    );
+  }
+
+  async getComments(submissionId: number): Promise<{ data: CommentNode[] }> {
+    return this.request<{ data: CommentNode[] }>(
+      `/submissions/${submissionId}/comments?include=all`
+    );
+  }
+
+  async createComment(
+    submissionId: number,
+    data: CreateCommentInput,
+    turnstileToken: string,
+    fingerprint: string
+  ): Promise<{ data: CommentNode }> {
+    return this.request<{ data: CommentNode }>(
+      `/submissions/${submissionId}/comments`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "X-Turnstile-Token": turnstileToken,
+          "X-Fingerprint": fingerprint,
+        },
+      }
+    );
+  }
+
+  async voteComment(
+    commentId: number,
+    value: VoteValue,
+    fingerprint: string
+  ): Promise<{ data: CommentNode }> {
+    return this.request<{ data: CommentNode }>(`/comments/${commentId}/vote`, {
+      method: "POST",
+      body: JSON.stringify({ value } as VoteCommentInput),
+      headers: {
+        "X-Fingerprint": fingerprint,
+      },
+    });
+  }
+
+  async deleteComment(
+    commentId: number,
+    fingerprint: string
+  ): Promise<{ data: CommentNode }> {
+    return this.request<{ data: CommentNode }>(`/comments/${commentId}`, {
+      method: "DELETE",
+      headers: {
+        "X-Fingerprint": fingerprint,
+      },
     });
   }
 }

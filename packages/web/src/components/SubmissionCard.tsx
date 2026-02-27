@@ -1,5 +1,8 @@
 import { A } from "@solidjs/router";
+import { createSignal, onMount, Show } from "solid-js";
 import type { Submission } from "@locallama/shared";
+import { generateFingerprint } from "../lib/fingerprint";
+import { VoteButtons } from "./VoteButtons";
 
 interface SubmissionCardProps {
   submission: Submission;
@@ -20,6 +23,12 @@ function timeAgo(date: string): string {
 
 export function SubmissionCard(props: SubmissionCardProps) {
   const s = () => props.submission;
+  const [fingerprint, setFingerprint] = createSignal("");
+
+  onMount(async () => {
+    const fp = await generateFingerprint();
+    setFingerprint(fp);
+  });
 
   return (
     <article class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
@@ -61,25 +70,17 @@ export function SubmissionCard(props: SubmissionCardProps) {
       </div>
 
       <div class="flex items-center justify-between text-sm">
-        <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-            aria-label="Upvote"
-          >
-            ▲
-          </button>
-          <span class="font-medium text-gray-700 dark:text-gray-300">
-            {s().score}
-          </span>
-          <button
-            type="button"
-            class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-            aria-label="Downvote"
-          >
-            ▼
-          </button>
-        </div>
+        <Show
+          when={fingerprint()}
+          fallback={<span class="text-gray-400">...</span>}
+        >
+          <VoteButtons
+            submissionId={s().id}
+            initialScore={s().score}
+            fingerprint={fingerprint()}
+            size="small"
+          />
+        </Show>
         <time class="text-xs text-gray-400" datetime={s().createdAt}>
           {timeAgo(s().createdAt)}
         </time>
