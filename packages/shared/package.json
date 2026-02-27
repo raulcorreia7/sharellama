@@ -8,6 +8,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./schemas/submission": {
+      "import": "./dist/schemas/submission.js",
+      "types": "./dist/schemas/submission.d.ts"
     }
   },
   "scripts": {

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { Env } from "./env";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
+import submissionsRoutes from "./routes/submissions";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -13,7 +14,7 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Turnstile-Token"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Turnstile-Token", "X-Fingerprint"],
   })
 );
 
@@ -48,5 +49,7 @@ app.get("/test/rate-limit", testRateLimit, (c) => {
   requestCount++;
   return c.json({ count: requestCount });
 });
+
+app.route("/submissions", submissionsRoutes);
 
 export default app;
