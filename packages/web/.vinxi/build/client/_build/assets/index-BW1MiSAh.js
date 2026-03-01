@@ -1,1 +1,0 @@
-import{i as n,w as r,l as i,b as m,t as o,T as s}from"./index-DBfRNh7I.js";var c=o("<main><!$><!/><h1>LocalLlama");function $(){return(()=>{var e=n(c),a=e.firstChild,[t,l]=r(a.nextSibling);return t.nextSibling,i(e,m(s,{children:"LocalLlama"}),t,l),e})()}export{$ as default};

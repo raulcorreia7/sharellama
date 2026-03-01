@@ -1,1 +1,0 @@
-import{ssr as a,ssrHydrationKey as r,escape as e,createComponent as o}from"solid-js/web";import{T as t}from"./assets/index-Dps0aSs2.js";import"solid-js";var m=["<main","><!--$-->","<!--/--><h1>LocalLlama</h1></main>"];function p(){return a(m,r(),e(o(t,{children:"LocalLlama"})))}export{p as default};
