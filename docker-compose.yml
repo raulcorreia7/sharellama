@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:18-alpine
+    network_mode: host
+    environment:
+      POSTGRES_USER: locallama
+      POSTGRES_PASSWORD: locallama
+      POSTGRES_DB: locallama
+    volumes:
+      - locallama_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locallama -d locallama"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  locallama_data:
