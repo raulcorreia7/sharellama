@@ -2,19 +2,13 @@ import { describe, it, expect } from "vitest";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, and, desc, sql as drizzleSql } from "drizzle-orm";
-import {
-  createTestDb,
-  createMockEnv,
-  submissions,
-  comments,
-  commentVotes,
-} from "../test/db";
+import { createTestDb, createMockEnv, submissions, comments, commentVotes } from "../test/db";
 import {
   createCommentSchema,
   listCommentsQuerySchema,
   voteCommentSchema,
   type CommentNode,
-} from "@locallama/shared/schemas/comment";
+} from "@sharellama/model/schemas/comment";
 
 type Env = ReturnType<typeof createMockEnv>;
 
@@ -22,9 +16,7 @@ function truncateHash(hash: string): string {
   return hash.slice(0, 4);
 }
 
-function buildCommentTree(
-  commentsList: (typeof comments.$inferSelect)[]
-): CommentNode[] {
+function buildCommentTree(commentsList: (typeof comments.$inferSelect)[]): CommentNode[] {
   const commentMap = new Map<number, CommentNode>();
   const rootComments: CommentNode[] = [];
 
@@ -70,7 +62,9 @@ function sanitizeComment(comment: typeof comments.$inferSelect): CommentNode {
 
 async function hashFingerprint(fp: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fp));
-  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function createCommentsApp() {
@@ -182,11 +176,7 @@ async function createCommentsApp() {
     const voterHash = await hashFingerprint(fingerprint);
     const data = c.req.valid("json");
 
-    const comment = await db
-      .select()
-      .from(comments)
-      .where(eq(comments.id, commentId))
-      .limit(1);
+    const comment = await db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
 
     if (!comment[0]) {
       return c.json({ error: "Comment not found" }, 404);
@@ -251,17 +241,28 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/submissions/${sub.id}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "commenter-1",
+      const res = await app.request(
+        `/submissions/${sub.id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "commenter-1",
+          },
+          body: JSON.stringify({ body: "Great post!" }),
         },
-        body: JSON.stringify({ body: "Great post!" }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(201);
       const body = await res.json();
@@ -276,7 +277,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const authorHash = await hashFingerprint("commenter-1");
@@ -285,14 +293,18 @@ describe("Comments API", () => {
         .values({ submissionId: sub.id, authorHash, body: "Parent comment" })
         .returning();
 
-      const res = await app.request(`/submissions/${sub.id}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "commenter-2",
+      const res = await app.request(
+        `/submissions/${sub.id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "commenter-2",
+          },
+          body: JSON.stringify({ body: "Reply!", parentId: parent.id }),
         },
-        body: JSON.stringify({ body: "Reply!", parentId: parent.id }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(201);
       const body = await res.json();
@@ -306,14 +318,25 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/submissions/${sub.id}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: "Comment" }),
-      }, env);
+      const res = await app.request(
+        `/submissions/${sub.id}/comments`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: "Comment" }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(400);
     });
@@ -324,17 +347,28 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/submissions/${sub.id}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "fp",
+      const res = await app.request(
+        `/submissions/${sub.id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "fp",
+          },
+          body: JSON.stringify({ body: "" }),
         },
-        body: JSON.stringify({ body: "" }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(400);
     });
@@ -343,14 +377,18 @@ describe("Comments API", () => {
       const { app } = await createCommentsApp();
       const env = createMockEnv();
 
-      const res = await app.request("/submissions/99999/comments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "fp",
+      const res = await app.request(
+        "/submissions/99999/comments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "fp",
+          },
+          body: JSON.stringify({ body: "Comment" }),
         },
-        body: JSON.stringify({ body: "Comment" }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(404);
     });
@@ -361,17 +399,28 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/submissions/${sub.id}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "fp",
+      const res = await app.request(
+        `/submissions/${sub.id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "fp",
+          },
+          body: JSON.stringify({ body: "Reply", parentId: 99999 }),
         },
-        body: JSON.stringify({ body: "Reply", parentId: 99999 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(404);
     });
@@ -384,7 +433,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       await db.insert(comments).values([
@@ -405,7 +461,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const [parent] = await db
@@ -442,7 +505,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const [comment] = await db
@@ -450,14 +520,18 @@ describe("Comments API", () => {
         .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
-      const res = await app.request(`/comments/${comment.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/comments/${comment.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -470,7 +544,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const [comment] = await db
@@ -478,23 +559,31 @@ describe("Comments API", () => {
         .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
-      await app.request(`/comments/${comment.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      await app.request(
+        `/comments/${comment.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
-      const res = await app.request(`/comments/${comment.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/comments/${comment.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -507,7 +596,14 @@ describe("Comments API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const [comment] = await db
@@ -515,23 +611,31 @@ describe("Comments API", () => {
         .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
-      await app.request(`/comments/${comment.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      await app.request(
+        `/comments/${comment.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
-      const res = await app.request(`/comments/${comment.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/comments/${comment.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: -1 }),
         },
-        body: JSON.stringify({ value: -1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -542,11 +646,15 @@ describe("Comments API", () => {
       const { app } = await createCommentsApp();
       const env = createMockEnv();
 
-      const res = await app.request("/comments/1/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+      const res = await app.request(
+        "/comments/1/vote",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: 1 }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(400);
     });
@@ -555,14 +663,18 @@ describe("Comments API", () => {
       const { app } = await createCommentsApp();
       const env = createMockEnv();
 
-      const res = await app.request("/comments/99999/vote", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        "/comments/99999/vote",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(404);
     });

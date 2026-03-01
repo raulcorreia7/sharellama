@@ -1,10 +1,5 @@
-import { createDb } from "@locallama/db";
+import { createDb, type Db } from "@sharellama/database";
 
-let db: ReturnType<typeof createDb> | null = null;
-
-export function getDb(databaseUrl: string): ReturnType<typeof createDb> {
-  if (!db) {
-    db = createDb(databaseUrl);
-  }
-  return db;
+export function getDb(databaseUrl: string): Db {
+  return createDb(databaseUrl);
 }

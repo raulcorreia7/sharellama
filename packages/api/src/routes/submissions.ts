@@ -3,13 +3,13 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, desc, asc, sql, and, gte, lte, or } from "drizzle-orm";
 import type { Env } from "../env";
 import { getDb } from "../lib/db";
-import { submissions, votes } from "@locallama/db";
+import { submissions, votes } from "@sharellama/database";
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   listSubmissionsQuerySchema,
-} from "@locallama/shared/schemas/submission";
-import type { VoteValue } from "@locallama/shared/schemas/vote";
+} from "@sharellama/model/schemas/submission";
+import type { VoteValue } from "@sharellama/model/schemas/vote";
 import { rateLimitSubmission } from "../middleware/rateLimit";
 import { verifyTurnstile } from "../middleware/turnstile";
 
@@ -41,7 +41,7 @@ async function getVoterHash(c: Context<{ Bindings: Env }>): Promise<string | nul
 async function getUserVote(
   db: ReturnType<typeof getDb>,
   voterHash: string,
-  submissionId: number
+  submissionId: number,
 ): Promise<VoteValue | null> {
   const vote = await db
     .select()
@@ -52,7 +52,7 @@ async function getUserVote(
 }
 
 function sanitizeForResponse(
-  submission: typeof submissions.$inferSelect
+  submission: typeof submissions.$inferSelect,
 ): Omit<typeof submissions.$inferSelect, "editToken"> {
   const { editToken: _, ...rest } = submission;
   return rest;
@@ -98,9 +98,9 @@ app.post(
         submission: sanitizeForResponse(submission),
         adminLink,
       },
-      201
+      201,
     );
-  }
+  },
 );
 
 app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
@@ -118,8 +118,8 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
       or(
         sql`${submissions.title} ILIKE ${searchPattern}`,
         sql`${submissions.description} ILIKE ${searchPattern}`,
-        sql`${submissions.modelName} ILIKE ${searchPattern}`
-      )
+        sql`${submissions.modelName} ILIKE ${searchPattern}`,
+      ),
     );
   }
   if (model) conditions.push(sql`${submissions.modelName} ILIKE ${`%${model}%`}`);
@@ -161,9 +161,7 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
   let dataWithVotes: Array<SanitizedSubmission & { userVote?: VoteValue | null }>;
 
   if (voterHash) {
-    const userVotes = await Promise.all(
-      results.map((r) => getUserVote(db, voterHash, r.id))
-    );
+    const userVotes = await Promise.all(results.map((r) => getUserVote(db, voterHash, r.id)));
     dataWithVotes = results.map((r, i) => ({
       ...sanitizeForResponse(r),
       userVote: userVotes[i],
@@ -274,11 +272,7 @@ app.get("/:id", async (c) => {
     return c.json({ error: "Invalid ID" }, 400);
   }
 
-  const submission = await db
-    .select()
-    .from(submissions)
-    .where(eq(submissions.id, id))
-    .limit(1);
+  const submission = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
   if (!submission[0]) {
     return c.json({ error: "Submission not found" }, 404);
@@ -303,11 +297,7 @@ app.patch("/:id/admin/:token", zValidator("json", updateSubmissionSchema), async
     return c.json({ error: "Invalid ID" }, 400);
   }
 
-  const existing = await db
-    .select()
-    .from(submissions)
-    .where(eq(submissions.id, id))
-    .limit(1);
+  const existing = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
   if (!existing[0]) {
     return c.json({ error: "Submission not found" }, 404);
@@ -344,11 +334,7 @@ app.delete("/:id/admin/:token", async (c) => {
     return c.json({ error: "Invalid ID" }, 400);
   }
 
-  const existing = await db
-    .select()
-    .from(submissions)
-    .where(eq(submissions.id, id))
-    .limit(1);
+  const existing = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
   if (!existing[0]) {
     return c.json({ error: "Submission not found" }, 404);

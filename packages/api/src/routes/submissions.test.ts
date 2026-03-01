@@ -2,18 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, and, desc, asc, sql as drizzleSql } from "drizzle-orm";
-import {
-  createTestDb,
-  createMockEnv,
-  submissions,
-  votes,
-  type TestDb,
-} from "../test/db";
+import { createTestDb, createMockEnv, submissions, votes, type TestDb } from "../test/db";
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
   listSubmissionsQuerySchema,
-} from "@locallama/shared/schemas/submission";
+} from "@sharellama/model/schemas/submission";
 
 type Env = ReturnType<typeof createMockEnv>;
 
@@ -37,7 +31,9 @@ async function createTestApp() {
       .slice(0, length);
   }
 
-  async function getVoterHash(c: { req: { header: (n: string) => string | undefined } }): Promise<string | null> {
+  async function getVoterHash(c: {
+    req: { header: (n: string) => string | undefined };
+  }): Promise<string | null> {
     const fingerprint = c.req.header("X-Fingerprint");
     if (!fingerprint) return null;
     return hashFingerprint(fingerprint);
@@ -98,9 +94,7 @@ async function createTestApp() {
       .limit(limit)
       .offset(offset);
 
-    const countResult = await db
-      .select({ count: drizzleSql<number>`count(*)` })
-      .from(submissions);
+    const countResult = await db.select({ count: drizzleSql<number>`count(*)` }).from(submissions);
 
     const total = Number(countResult[0]?.count ?? 0);
 
@@ -118,7 +112,7 @@ async function createTestApp() {
         }
         const { editToken: _, ...rest } = r;
         return { ...rest, userVote };
-      })
+      }),
     );
 
     return c.json({
@@ -133,11 +127,7 @@ async function createTestApp() {
       return c.json({ error: "Invalid ID" }, 400);
     }
 
-    const result = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.id, id))
-      .limit(1);
+    const result = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
     if (!result[0]) {
       return c.json({ error: "Submission not found" }, 404);
@@ -166,11 +156,7 @@ async function createTestApp() {
       return c.json({ error: "Invalid ID" }, 400);
     }
 
-    const existing = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.id, id))
-      .limit(1);
+    const existing = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
     if (!existing[0]) {
       return c.json({ error: "Submission not found" }, 404);
@@ -203,11 +189,7 @@ async function createTestApp() {
       return c.json({ error: "Invalid ID" }, 400);
     }
 
-    const existing = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.id, id))
-      .limit(1);
+    const existing = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1);
 
     if (!existing[0]) {
       return c.json({ error: "Submission not found" }, 404);
@@ -230,19 +212,23 @@ describe("Submissions API", () => {
       const { app } = await createTestApp();
       const env = createMockEnv();
 
-      const res = await app.request("/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "test-fingerprint-123",
+      const res = await app.request(
+        "/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "test-fingerprint-123",
+          },
+          body: JSON.stringify({
+            title: "Test Submission",
+            description: "A test description",
+            runtime: "llama.cpp",
+            modelName: "llama-3-8b",
+          }),
         },
-        body: JSON.stringify({
-          title: "Test Submission",
-          description: "A test description",
-          runtime: "llama.cpp",
-          modelName: "llama-3-8b",
-        }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(201);
       const body = await res.json();
@@ -257,15 +243,19 @@ describe("Submissions API", () => {
       const { app } = await createTestApp();
       const env = createMockEnv();
 
-      const res = await app.request("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Test",
-          runtime: "llama.cpp",
-          modelName: "llama-3-8b",
-        }),
-      }, env);
+      const res = await app.request(
+        "/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Test",
+            runtime: "llama.cpp",
+            modelName: "llama-3-8b",
+          }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(400);
       const body = await res.json();
@@ -276,16 +266,20 @@ describe("Submissions API", () => {
       const { app } = await createTestApp();
       const env = createMockEnv();
 
-      const res = await app.request("/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "test-fp",
+      const res = await app.request(
+        "/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "test-fp",
+          },
+          body: JSON.stringify({
+            title: "Test",
+          }),
         },
-        body: JSON.stringify({
-          title: "Test",
-        }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(400);
     });
@@ -294,26 +288,30 @@ describe("Submissions API", () => {
       const { app } = await createTestApp();
       const env = createMockEnv();
 
-      const res = await app.request("/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "test-fp",
+      const res = await app.request(
+        "/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "test-fp",
+          },
+          body: JSON.stringify({
+            title: "Full Submission",
+            description: "Description",
+            runtime: "llama.cpp",
+            runtimeVersion: "b3000",
+            modelName: "llama-3-8b",
+            quantization: "Q4_K_M",
+            gpu: "RTX 4090",
+            cpu: "Ryzen 9 7950X",
+            ramGb: 64,
+            tokensPerSecond: 45.5,
+            tags: ["fast", "gpu"],
+          }),
         },
-        body: JSON.stringify({
-          title: "Full Submission",
-          description: "Description",
-          runtime: "llama.cpp",
-          runtimeVersion: "b3000",
-          modelName: "llama-3-8b",
-          quantization: "Q4_K_M",
-          gpu: "RTX 4090",
-          cpu: "Ryzen 9 7950X",
-          ramGb: 64,
-          tokensPerSecond: 45.5,
-          tags: ["fast", "gpu"],
-        }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(201);
       const body = await res.json();
@@ -331,8 +329,22 @@ describe("Submissions API", () => {
       const env = createMockEnv();
 
       await db.insert(submissions).values([
-        { title: "Sub 1", runtime: "llama.cpp", modelName: "m1", authorHash: "a1", editToken: "t1", updatedAt: new Date() },
-        { title: "Sub 2", runtime: "llama.cpp", modelName: "m2", authorHash: "a2", editToken: "t2", updatedAt: new Date() },
+        {
+          title: "Sub 1",
+          runtime: "llama.cpp",
+          modelName: "m1",
+          authorHash: "a1",
+          editToken: "t1",
+          updatedAt: new Date(),
+        },
+        {
+          title: "Sub 2",
+          runtime: "llama.cpp",
+          modelName: "m2",
+          authorHash: "a2",
+          editToken: "t2",
+          updatedAt: new Date(),
+        },
       ]);
 
       const res = await app.request("/?page=1&limit=10", {}, env);
@@ -350,8 +362,24 @@ describe("Submissions API", () => {
       const env = createMockEnv();
 
       await db.insert(submissions).values([
-        { title: "Older", runtime: "r", modelName: "m", authorHash: "a", editToken: "t1", score: 10, updatedAt: new Date(Date.now() - 1000) },
-        { title: "Newer", runtime: "r", modelName: "m", authorHash: "a", editToken: "t2", score: 5, updatedAt: new Date() },
+        {
+          title: "Older",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t1",
+          score: 10,
+          updatedAt: new Date(Date.now() - 1000),
+        },
+        {
+          title: "Newer",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t2",
+          score: 5,
+          updatedAt: new Date(),
+        },
       ]);
 
       const res = await app.request("/?sort=score&order=desc", {}, env);
@@ -365,10 +393,19 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const voterHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("my-fp"))))
+      const voterHash = Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("my-fp"))),
+      )
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
@@ -378,9 +415,13 @@ describe("Submissions API", () => {
         value: 1,
       });
 
-      const res = await app.request("/", {
-        headers: { "X-Fingerprint": "my-fp" },
-      }, env);
+      const res = await app.request(
+        "/",
+        {
+          headers: { "X-Fingerprint": "my-fp" },
+        },
+        env,
+      );
 
       const body = await res.json();
       expect(body.data[0].userVote).toBe(1);
@@ -394,7 +435,14 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const res = await app.request(`/${sub.id}`, {}, env);
@@ -429,14 +477,25 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Original", runtime: "r", modelName: "m", authorHash: "a", editToken: "valid-token", updatedAt: new Date() })
+        .values({
+          title: "Original",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "valid-token",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/admin/valid-token`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Updated" }),
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/admin/valid-token`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "Updated" }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -449,14 +508,25 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "correct-token", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "correct-token",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/admin/wrong-token`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Hacked" }),
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/admin/wrong-token`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "Hacked" }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(403);
     });
@@ -465,11 +535,15 @@ describe("Submissions API", () => {
       const { app } = await createTestApp();
       const env = createMockEnv();
 
-      const res = await app.request("/99999/admin/token", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Updated" }),
-      }, env);
+      const res = await app.request(
+        "/99999/admin/token",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: "Updated" }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(404);
     });
@@ -482,12 +556,23 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "To Delete", runtime: "r", modelName: "m", authorHash: "a", editToken: "delete-token", updatedAt: new Date() })
+        .values({
+          title: "To Delete",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "delete-token",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/admin/delete-token`, {
-        method: "DELETE",
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/admin/delete-token`,
+        {
+          method: "DELETE",
+        },
+        env,
+      );
 
       expect(res.status).toBe(204);
 
@@ -501,12 +586,23 @@ describe("Submissions API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "correct", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "correct",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/admin/wrong`, {
-        method: "DELETE",
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/admin/wrong`,
+        {
+          method: "DELETE",
+        },
+        env,
+      );
 
       expect(res.status).toBe(403);
 

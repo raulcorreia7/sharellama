@@ -3,13 +3,13 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, desc, and, sql } from "drizzle-orm";
 import type { Env } from "../env";
 import { getDb } from "../lib/db";
-import { comments, commentVotes, submissions } from "@locallama/db";
+import { comments, commentVotes, submissions } from "@sharellama/database";
 import {
   createCommentSchema,
   listCommentsQuerySchema,
   voteCommentSchema,
   type CommentNode,
-} from "@locallama/shared/schemas/comment";
+} from "@sharellama/model/schemas/comment";
 import { rateLimitComment, rateLimitVote } from "../middleware/rateLimit";
 import { verifyTurnstile } from "../middleware/turnstile";
 
@@ -25,9 +25,7 @@ function truncateAuthorHash(hash: string): string {
   return hash.slice(0, 4);
 }
 
-export function buildCommentTree(
-  commentsList: (typeof comments.$inferSelect)[]
-): CommentNode[] {
+export function buildCommentTree(commentsList: (typeof comments.$inferSelect)[]): CommentNode[] {
   const commentMap = new Map<number, CommentNode>();
   const rootComments: CommentNode[] = [];
 
@@ -59,9 +57,7 @@ export function buildCommentTree(
   return rootComments;
 }
 
-export function sanitizeCommentForResponse(
-  comment: typeof comments.$inferSelect
-): CommentNode {
+export function sanitizeCommentForResponse(comment: typeof comments.$inferSelect): CommentNode {
   return {
     id: comment.id,
     submissionId: comment.submissionId,
@@ -112,7 +108,7 @@ submissionCommentsRoutes.get(
     return c.json({
       data: commentsList.map(sanitizeCommentForResponse),
     });
-  }
+  },
 );
 
 submissionCommentsRoutes.post(
@@ -151,12 +147,7 @@ submissionCommentsRoutes.post(
       const parentComment = await db
         .select()
         .from(comments)
-        .where(
-          and(
-            eq(comments.id, data.parentId),
-            eq(comments.submissionId, submissionId)
-          )
-        )
+        .where(and(eq(comments.id, data.parentId), eq(comments.submissionId, submissionId)))
         .limit(1);
 
       if (!parentComment[0]) {
@@ -179,7 +170,7 @@ submissionCommentsRoutes.post(
     }
 
     return c.json({ data: sanitizeCommentForResponse(comment) }, 201);
-  }
+  },
 );
 
 const commentsRoutes = new Hono<{ Bindings: Env }>();
@@ -204,11 +195,7 @@ commentsRoutes.post(
     const voterHash = await hashFingerprint(fingerprint);
     const data = c.req.valid("json");
 
-    const comment = await db
-      .select()
-      .from(comments)
-      .where(eq(comments.id, commentId))
-      .limit(1);
+    const comment = await db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
 
     if (!comment[0]) {
       return c.json({ error: "Comment not found" }, 404);
@@ -217,19 +204,12 @@ commentsRoutes.post(
     const existingVote = await db
       .select()
       .from(commentVotes)
-      .where(
-        and(
-          eq(commentVotes.voterHash, voterHash),
-          eq(commentVotes.commentId, commentId)
-        )
-      )
+      .where(and(eq(commentVotes.voterHash, voterHash), eq(commentVotes.commentId, commentId)))
       .limit(1);
 
     if (existingVote[0]) {
       if (existingVote[0].value === data.value) {
-        await db
-          .delete(commentVotes)
-          .where(eq(commentVotes.id, existingVote[0].id));
+        await db.delete(commentVotes).where(eq(commentVotes.id, existingVote[0].id));
         await db
           .update(comments)
           .set({ score: sql`${comments.score} - ${data.value}` })
@@ -263,7 +243,7 @@ commentsRoutes.post(
       .limit(1);
 
     return c.json({ data: sanitizeCommentForResponse(updatedComment[0]!) });
-  }
+  },
 );
 
 commentsRoutes.delete("/:id", async (c) => {
@@ -281,11 +261,7 @@ commentsRoutes.delete("/:id", async (c) => {
 
   const authorHash = await hashFingerprint(fingerprint);
 
-  const comment = await db
-    .select()
-    .from(comments)
-    .where(eq(comments.id, commentId))
-    .limit(1);
+  const comment = await db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
 
   if (!comment[0]) {
     return c.json({ error: "Comment not found" }, 404);

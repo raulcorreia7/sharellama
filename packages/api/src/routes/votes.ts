@@ -3,8 +3,8 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, and, sql } from "drizzle-orm";
 import type { Env } from "../env";
 import { getDb } from "../lib/db";
-import { submissions, votes } from "@locallama/db";
-import { createVoteSchema, type VoteValue } from "@locallama/shared/schemas/vote";
+import { submissions, votes } from "@sharellama/database";
+import { createVoteSchema, type VoteValue } from "@sharellama/model/schemas/vote";
 import { rateLimitVote } from "../middleware/rateLimit";
 
 const app = new Hono<{ Bindings: Env }>();

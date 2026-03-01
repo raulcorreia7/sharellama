@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, and, sql as drizzleSql } from "drizzle-orm";
 import { createTestDb, createMockEnv, submissions, votes } from "../test/db";
-import { createVoteSchema } from "@locallama/shared/schemas/vote";
+import { createVoteSchema } from "@sharellama/model/schemas/vote";
 
 type Env = ReturnType<typeof createMockEnv>;
 
@@ -136,7 +136,9 @@ async function createVotesApp() {
 
 async function getHash(fp: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fp));
-  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 describe("Votes API", () => {
@@ -147,17 +149,29 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", score: 0, updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          score: 0,
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -171,17 +185,29 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", score: 5, updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          score: 5,
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: -1 }),
         },
-        body: JSON.stringify({ value: -1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -195,26 +221,42 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", score: 0, updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          score: 0,
+          updatedAt: new Date(),
+        })
         .returning();
 
-      await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -231,26 +273,42 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", score: 0, updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          score: 0,
+          updatedAt: new Date(),
+        })
         .returning();
 
-      await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: -1 }),
         },
-        body: JSON.stringify({ value: -1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -264,14 +322,25 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: 1 }),
+        },
+        env,
+      );
 
       expect(res.status).toBe(400);
       const body = await res.json();
@@ -282,14 +351,18 @@ describe("Votes API", () => {
       const { app } = await createVotesApp();
       const env = createMockEnv();
 
-      const res = await app.request("/99999/vote", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      const res = await app.request(
+        "/99999/vote",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(404);
     });
@@ -300,26 +373,42 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", score: 0, updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          score: 0,
+          updatedAt: new Date(),
+        })
         .returning();
 
-      await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-1",
+      await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-1",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Fingerprint": "voter-2",
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fingerprint": "voter-2",
+          },
+          body: JSON.stringify({ value: 1 }),
         },
-        body: JSON.stringify({ value: 1 }),
-      }, env);
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -337,15 +426,26 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
       const voterHash = await getHash("voter-1");
       await db.insert(votes).values({ voterHash, submissionId: sub.id, value: 1 });
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        headers: { "X-Fingerprint": "voter-1" },
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          headers: { "X-Fingerprint": "voter-1" },
+        },
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -358,12 +458,23 @@ describe("Votes API", () => {
 
       const [sub] = await db
         .insert(submissions)
-        .values({ title: "Test", runtime: "r", modelName: "m", authorHash: "a", editToken: "t", updatedAt: new Date() })
+        .values({
+          title: "Test",
+          runtime: "r",
+          modelName: "m",
+          authorHash: "a",
+          editToken: "t",
+          updatedAt: new Date(),
+        })
         .returning();
 
-      const res = await app.request(`/${sub.id}/vote`, {
-        headers: { "X-Fingerprint": "voter-1" },
-      }, env);
+      const res = await app.request(
+        `/${sub.id}/vote`,
+        {
+          headers: { "X-Fingerprint": "voter-1" },
+        },
+        env,
+      );
 
       expect(res.status).toBe(200);
       const body = await res.json();
