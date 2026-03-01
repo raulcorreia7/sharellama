@@ -18,6 +18,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@sharellama/database": ["./packages/database/dist/index.d.ts"],
+      "@sharellama/database/*": ["./packages/database/dist/*"],
+      "@sharellama/model": ["./packages/model/dist/index.d.ts"],
+      "@sharellama/model/*": ["./packages/model/dist/*"]
+    }
   }
 }

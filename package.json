@@ -1,6 +1,6 @@
 {
-  "name": "locallama",
-  "version": "0.0.1",
+  "name": "sharellama",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,9 +12,22 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
-    "deploy:api": "pnpm --filter @locallama/api run deploy",
-    "deploy:web": "pnpm --filter @locallama/web run deploy",
-    "deploy": "pnpm run deploy:api && pnpm run deploy:web"
+    "deploy:api": "pnpm --filter @sharellama/api run deploy",
+    "deploy:ui": "pnpm --filter @sharellama/ui run deploy",
+    "deploy": "pnpm run deploy:api && pnpm run deploy:ui",
+    "dev": "pnpm run dev:api & pnpm run dev:ui",
+    "dev:api": "pnpm --filter @sharellama/api run dev",
+    "dev:ui": "pnpm --filter @sharellama/ui run dev",
+    "dev:db": "pnpm --filter @sharellama/database run db:studio",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "bash ./scripts/db-reset.sh",
+    "db:push": "pnpm --filter @sharellama/database run db:push",
+    "db:generate": "pnpm --filter @sharellama/database run db:generate",
+    "db:setup": "bash ./scripts/db-setup.sh",
+    "test:db:reset": "bash ./scripts/test-db-reset.sh",
+    "test:db:setup": "bash ./scripts/test-db-setup.sh",
+    "test:api": "bash ./scripts/test-api.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
