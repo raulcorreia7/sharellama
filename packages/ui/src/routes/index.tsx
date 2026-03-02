@@ -9,15 +9,8 @@ import { SearchBar } from "../components/SearchBar";
 import { Button } from "../components/display/Button";
 import { Layout } from "../components/layout";
 import { Section } from "../components/layout/Section";
-import {
-  ChevronRight,
-  Plus,
-  LayoutGrid,
-  TrendingUp,
-  ArrowRight,
-  Settings,
-} from "../components/icons";
-import { formatModelName } from "../lib/huggingface";
+import { ChevronRight, Plus, LayoutGrid, TrendingUp, ArrowRight, Heart } from "../components/icons";
+import { formatModelName, getTrendingModels, formatDownloads } from "../lib/huggingface";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -33,7 +26,7 @@ export default function Index() {
     DEFAULT_SUBMISSIONS,
   );
 
-  const [modelsMeta] = createResource(() => api.getSubmissionsMeta());
+  const [trendingModels] = createResource(() => getTrendingModels(12));
 
   const handleSearch = (e: Event) => {
     e.preventDefault();
@@ -165,30 +158,58 @@ export default function Index() {
       <Section>
         <div class="section-header">
           <h2 class="section-heading section-heading--with-icon">
-            <Settings size={20} />
-            Popular Models
+            <TrendingUp size={20} />
+            Trending on Hugging Face
           </h2>
+          <A
+            href="https://huggingface.co/models?library=gguf&sort=trending"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn--ghost btn--sm"
+          >
+            View all
+            <ChevronRight size={14} />
+          </A>
         </div>
 
-        <Show when={modelsMeta.loading}>
+        <Show when={trendingModels.loading}>
           <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
-            Loading models...
+            Loading trending models...
           </div>
         </Show>
 
-        <Show when={!modelsMeta.loading && modelsMeta() && modelsMeta()!.models.length > 0}>
+        <Show when={!trendingModels.loading && trendingModels()}>
           <div class="popular-models-grid">
-            <For each={modelsMeta()!.models.slice(0, 8)}>
+            <For each={trendingModels()!.slice(0, 6)}>
               {(model) => (
                 <A
-                  href={`/submissions?model=${encodeURIComponent(model.name)}`}
+                  href={`https://huggingface.co/${model.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   class="card card--hover popular-model-card"
                 >
-                  <span class="popular-model-name">{formatModelName(model.name)}</span>
-                  <span class="popular-model-count">
-                    {model.count} config{model.count !== 1 ? "s" : ""}
-                  </span>
-                  <ArrowRight size={14} class="popular-model-arrow" />
+                  <div class="popular-model-header">
+                    <Show when={model.authorAvatar}>
+                      <img
+                        src={model.authorAvatar}
+                        alt={model.author}
+                        class="popular-model-org-avatar"
+                      />
+                    </Show>
+                    <span class="popular-model-name">{formatModelName(model.id)}</span>
+                  </div>
+                  <div class="popular-model-stats">
+                    <span class="popular-model-stat">
+                      {formatDownloads(model.downloads)} downloads
+                    </span>
+                    <Show when={model.likes > 0}>
+                      <span class="popular-model-stat">
+                        <Heart size={12} />
+                        {formatDownloads(model.likes)}
+                      </span>
+                    </Show>
+                  </div>
+                  <ArrowRight size={18} class="popular-model-arrow" />
                 </A>
               )}
             </For>
