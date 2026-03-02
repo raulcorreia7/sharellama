@@ -2951,10 +2951,18 @@ h6 {
    MODELS PAGE
    ---------------------------------------- */
 
-.models-layout {
+.models-page-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  flex: 1;
+}
+
+.models-search-wrapper {
+  margin-bottom: 1rem;
+}
+
+.models-page-content .empty-state-wrapper {
+  padding: 2rem 0;
 }
 
 @media (min-width: 1024px) {

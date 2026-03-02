@@ -4,8 +4,6 @@ import { Title } from "@solidjs/meta";
 import type { HFModelResult } from "@sharellama/model";
 
 import { ModelCard } from "../../components/cards/ModelCard";
-import { Button } from "../../components/display/Button";
-import { Filter } from "../../components/icons";
 import {
   Breadcrumbs,
   EmptyState,
@@ -238,7 +236,6 @@ export default function ModelsList() {
   const [sort, setSort] = createSignal<"configCount" | "createdAt">("configCount");
   const [page, setPage] = createSignal(1);
   const [showImportModal, setShowImportModal] = createSignal(false);
-  const [sidebarOpen, setSidebarOpen] = createSignal(false);
 
   const [modelsResource, { refetch: refetchModels }] = createResource(
     () => ({
@@ -298,150 +295,115 @@ export default function ModelsList() {
       <PageHeader
         title="Browse Models"
         description="Discover and explore models with community-submitted configurations"
+        actions={
+          <div style={{ display: "flex", gap: "0.5rem", "align-items": "center" }}>
+            <select
+              value={sort()}
+              onChange={(e) => {
+                setSort(e.currentTarget.value as "configCount" | "createdAt");
+                setPage(1);
+              }}
+              class="input"
+              style={{ width: "auto" }}
+            >
+              <option value="configCount">Most Configurations</option>
+              <option value="createdAt">Recently Added</option>
+            </select>
+          </div>
+        }
       />
 
-      <div class="filter-toggle lg:hidden" style={{ "margin-bottom": "1rem" }}>
-        <Button type="button" onClick={() => setSidebarOpen(true)} variant="secondary" size="sm">
-          <Filter size={14} />
-          Sort
-        </Button>
-      </div>
-
-      <div class="models-layout">
-        {/* Sidebar */}
-        <aside
-          classList={{
-            "filter-sidebar": true,
-            "filter-sidebar--open": sidebarOpen(),
-          }}
-        >
-          <div class="filter-sidebar-header lg:hidden">
-            <h3 class="filter-sidebar-title">Sort</h3>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              class="filter-sidebar-close"
-            >
-              ×
-            </button>
-          </div>
-
-          <div class="filter-sidebar-content">
-            <div class="filter-group">
-              <label class="filter-label">Sort by</label>
-              <select
-                value={sort()}
-                onChange={(e) => {
-                  setSort(e.currentTarget.value as "configCount" | "createdAt");
-                  setPage(1);
-                }}
-                class="input"
-              >
-                <option value="configCount">Most Configurations</option>
-                <option value="createdAt">Recently Added</option>
-              </select>
-            </div>
-          </div>
-        </aside>
-
-        {/* Overlay for mobile */}
-        <Show when={sidebarOpen()}>
-          <div class="filter-sidebar-overlay lg:hidden" onClick={() => setSidebarOpen(false)} />
-        </Show>
-
-        {/* Main content */}
-        <div class="models-content">
-          <div class="models-search-wrapper">
-            <SearchBar
-              value={searchQuery()}
-              onChange={handleSearch}
-              placeholder="Search models..."
-              debounceMs={300}
-              showSuggestions={false}
-            />
-          </div>
-
-          <Show when={loading()}>
-            <LoadingState />
-          </Show>
-
-          <Show when={!loading() && models().length === 0}>
-            <div class="empty-state-wrapper">
-              <EmptyState
-                message={
-                  searchQuery() ? "No models match your search." : "No models have been added yet."
-                }
-                action={
-                  !searchQuery() ? (
-                    <button class="btn btn--primary" onClick={() => setShowImportModal(true)}>
-                      Import from HuggingFace
-                    </button>
-                  ) : undefined
-                }
-              />
-            </div>
-          </Show>
-
-          <Show when={!loading() && models().length > 0}>
-            <div class="model-cards-grid">
-              <For each={models()}>
-                {(model) => (
-                  <ModelCard
-                    slug={model.slug}
-                    name={model.name}
-                    org={model.org}
-                    orgAvatar={model.orgAvatar}
-                    configCount={model.configCount}
-                    downloads={model.downloads}
-                    likes={model.likes}
-                  />
-                )}
-              </For>
-            </div>
-
-            <Show when={pagination() && pagination()!.totalPages > 1}>
-              <div class="pagination">
-                <button
-                  class="btn btn--ghost"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page() === 1}
-                >
-                  Previous
-                </button>
-                <span class="text-muted">
-                  Page {page()} of {pagination()!.totalPages}
-                </span>
-                <button
-                  class="btn btn--ghost"
-                  onClick={() => setPage((p) => Math.min(pagination()!.totalPages, p + 1))}
-                  disabled={page() === pagination()!.totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            </Show>
-          </Show>
-
-          <PageFooter
-            stats={`${modelCount()} models • Updated ${timeAgo(lastRun())}`}
-            actions={[
-              ...(isStale()
-                ? [
-                    {
-                      label: "Refresh to get latest models",
-                      onClick: handleRefresh,
-                      variant: "ghost" as const,
-                    },
-                  ]
-                : []),
-              {
-                label: "Import Models",
-                onClick: () => setShowImportModal(true),
-                variant: "ghost" as const,
-              },
-            ]}
+      <div class="models-page-content">
+        <div class="models-search-wrapper">
+          <SearchBar
+            value={searchQuery()}
+            onChange={handleSearch}
+            placeholder="Search models..."
+            debounceMs={300}
+            showSuggestions={false}
           />
         </div>
+
+        <Show when={loading()}>
+          <LoadingState />
+        </Show>
+
+        <Show when={!loading() && models().length === 0}>
+          <div class="empty-state-wrapper">
+            <EmptyState
+              message={
+                searchQuery() ? "No models match your search." : "No models have been added yet."
+              }
+              action={
+                !searchQuery() ? (
+                  <button class="btn btn--primary" onClick={() => setShowImportModal(true)}>
+                    Import from HuggingFace
+                  </button>
+                ) : undefined
+              }
+            />
+          </div>
+        </Show>
+
+        <Show when={!loading() && models().length > 0}>
+          <div class="model-cards-grid">
+            <For each={models()}>
+              {(model) => (
+                <ModelCard
+                  slug={model.slug}
+                  name={model.name}
+                  org={model.org}
+                  orgAvatar={model.orgAvatar}
+                  configCount={model.configCount}
+                  downloads={model.downloads}
+                  likes={model.likes}
+                />
+              )}
+            </For>
+          </div>
+
+          <Show when={pagination() && pagination()!.totalPages > 1}>
+            <div class="pagination">
+              <button
+                class="btn btn--ghost"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page() === 1}
+              >
+                Previous
+              </button>
+              <span class="text-muted">
+                Page {page()} of {pagination()!.totalPages}
+              </span>
+              <button
+                class="btn btn--ghost"
+                onClick={() => setPage((p) => Math.min(pagination()!.totalPages, p + 1))}
+                disabled={page() === pagination()!.totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </Show>
+        </Show>
+
+        <PageFooter
+          stats={`${modelCount()} models • Updated ${timeAgo(lastRun())}`}
+          actions={[
+            ...(isStale()
+              ? [
+                  {
+                    label: "Refresh to get latest models",
+                    onClick: handleRefresh,
+                    variant: "ghost" as const,
+                  },
+                ]
+              : []),
+            {
+              label: "Import Models",
+              onClick: () => setShowImportModal(true),
+              variant: "ghost" as const,
+            },
+          ]}
+        />
       </div>
 
       <ImportModal
