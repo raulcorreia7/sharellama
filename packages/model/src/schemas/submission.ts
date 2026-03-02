@@ -6,13 +6,16 @@ export const createSubmissionSchema = z.object({
   cpu: z.string().max(200).optional(),
   gpu: z.string().max(200).optional(),
   ramGb: z.number().int().positive().optional(),
+  vramGb: z.number().int().positive().optional(),
   runtime: z.string().min(1).max(50),
   runtimeVersion: z.string().max(50).optional(),
-  modelName: z.string().min(1).max(100),
+  modelSlug: z.string().min(1).max(255),
   quantization: z.string().max(50).optional(),
+  quantSource: z.string().max(200).optional(),
+  quantUrl: z.string().max(500).optional(),
   contextLength: z.number().int().positive().optional(),
-  command: z.string().max(2000).optional(),
-  inferenceParams: z.record(z.unknown()).optional(),
+  command: z.string().max(5000).optional(),
+  inferenceParams: z.record(z.string(), z.unknown()).optional(),
   temperature: z.number().min(0).max(2).optional(),
   topP: z.number().min(0).max(1).optional(),
   topK: z.number().int().positive().optional(),
@@ -28,7 +31,7 @@ export const createSubmissionSchema = z.object({
   tags: z.array(z.string().max(50)).max(10).optional(),
 });
 
-export const updateSubmissionSchema = createSubmissionSchema.partial();
+export const updateSubmissionSchema = createSubmissionSchema.partial().omit({ modelSlug: true });
 
 export const listSubmissionsQuerySchema = z.object({
   q: z.string().max(200).optional(),
@@ -36,11 +39,16 @@ export const listSubmissionsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   sort: z.enum(["score", "createdAt", "tokensPerSecond"]).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
-  model: z.string().optional(),
+  modelSlug: z.string().max(255).optional(),
   gpu: z.string().optional(),
   cpu: z.string().optional(),
   quantization: z.string().optional(),
   runtime: z.string().optional(),
+  quantSource: z.string().optional(),
+  vramMin: z.coerce.number().positive().optional(),
+  vramMax: z.coerce.number().positive().optional(),
+  ramMin: z.coerce.number().positive().optional(),
+  ramMax: z.coerce.number().positive().optional(),
   minTps: z.coerce.number().positive().optional(),
   maxTps: z.coerce.number().positive().optional(),
 });

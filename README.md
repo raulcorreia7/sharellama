@@ -11,13 +11,31 @@ pnpm db:setup
 pnpm dev
 ```
 
+- UI: http://localhost:3000
+- API: http://localhost:8787
+
 ## Features
 
 - Submit and browse llama.cpp configurations
-- Hardware detection for optimal settings
-- Comment and vote on submissions
+- Hardware specs (CPU, GPU, RAM, VRAM)
+- Inference parameters (temperature, top-p, mirostat, etc.)
+- Performance metrics (tokens/sec, latency, memory)
+- Comments and voting
+- Hugging Face model/quantization discovery
 - Cloudflare Turnstile bot protection
-- Rate limiting on submissions
+- Rate limiting
+
+## Documentation
+
+| Document                             | Description                      |
+| ------------------------------------ | -------------------------------- |
+| [API Reference](docs/API.md)         | REST API endpoints and contracts |
+| [Database](docs/DATABASE.md)         | Schema, tables, relationships    |
+| [Types](docs/TYPES.md)               | TypeScript types and Zod schemas |
+| [Architecture](docs/ARCHITECTURE.md) | System design and data flow      |
+| [Development](docs/DEVELOPMENT.md)   | Local dev setup and workflows    |
+| [Deployment](docs/DEPLOYMENT.md)     | Production deployment guide      |
+| [Runbook](docs/RUNBOOK.md)           | Operations and troubleshooting   |
 
 ## Prerequisites
 
@@ -25,80 +43,6 @@ pnpm dev
 - pnpm >= 10
 - Docker (for local PostgreSQL)
 - Cloudflare account (for deployment)
-
-## Local Development
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/your-org/sharellama.git
-   cd sharellama
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Start PostgreSQL with Docker:
-
-   ```bash
-   pnpm db:up
-   ```
-
-4. Setup database schema:
-
-   ```bash
-   pnpm db:setup
-   ```
-
-5. Start development servers:
-   ```bash
-   pnpm dev
-   ```
-
-## Deployment
-
-### 1. Create Neon Database
-
-1. Go to [Neon Console](https://console.neon.tech)
-2. Create a new project
-3. Copy the connection string
-
-### 2. Get Turnstile Keys
-
-1. Go to [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile)
-2. Create a new site
-3. Copy the Site Key and Secret Key
-
-### 3. Deploy API to Cloudflare Workers
-
-1. Set production secrets:
-
-   ```bash
-   cd packages/api
-   wrangler secret put DATABASE_URL
-   wrangler secret put TURNSTILE_SECRET_KEY
-   ```
-
-2. Deploy:
-   ```bash
-   pnpm deploy:api
-   ```
-
-### 4. Deploy Frontend to Cloudflare Pages
-
-1. Build the frontend:
-
-   ```bash
-   VITE_API_URL=https://api.sharellama.io VITE_TURNSTILE_SITE_KEY=your-site-key pnpm --filter @sharellama/ui run build
-   ```
-
-2. Deploy:
-   ```bash
-   pnpm deploy:ui
-   ```
 
 ## Commands
 
@@ -115,18 +59,22 @@ pnpm dev
 | `pnpm db:down`    | Stop PostgreSQL container           |
 | `pnpm db:setup`   | Initialize database schema          |
 | `pnpm db:reset`   | Reset and reinitialize database     |
+| `pnpm dev:db`     | Open Drizzle Studio (DB viewer)     |
 | `pnpm deploy:api` | Deploy API to Cloudflare Workers    |
 | `pnpm deploy:ui`  | Deploy frontend to Cloudflare Pages |
-| `pnpm deploy`     | Deploy both API and frontend        |
 
 ## Environment Variables
 
-| Variable                  | Required | Description                                   |
-| ------------------------- | -------- | --------------------------------------------- |
-| `DATABASE_URL`            | Yes      | PostgreSQL connection string                  |
-| `TURNSTILE_SECRET_KEY`    | Yes      | Cloudflare Turnstile secret key (server-side) |
-| `VITE_API_URL`            | Yes      | API base URL (client-side)                    |
-| `VITE_TURNSTILE_SITE_KEY` | Yes      | Turnstile site key (client-side)              |
+Copy `.env.example` to `.env`:
+
+| Variable                  | Required | Description                      |
+| ------------------------- | -------- | -------------------------------- |
+| `DATABASE_URL`            | Yes      | PostgreSQL connection string     |
+| `TURNSTILE_SECRET_KEY`    | Yes      | Turnstile secret (server-side)   |
+| `VITE_API_URL`            | Yes      | API base URL (client-side)       |
+| `VITE_TURNSTILE_SITE_KEY` | Yes      | Turnstile site key (client-side) |
+| `ENVIRONMENT`             | No       | Environment name                 |
+| `BASE_URL`                | No       | Base URL for admin links         |
 
 ## Architecture
 
@@ -141,6 +89,17 @@ sharellama/
 ├── scripts/          # Build and deployment scripts
 └── docs/             # Documentation
 ```
+
+## Tech Stack
+
+| Layer      | Technology                                |
+| ---------- | ----------------------------------------- |
+| Frontend   | SolidStart, SolidJS, Tailwind CSS         |
+| API        | Hono, Cloudflare Workers                  |
+| Database   | PostgreSQL (Neon), Drizzle ORM            |
+| Validation | Zod                                       |
+| Auth       | Browser fingerprint, Cloudflare Turnstile |
+| Testing    | Vitest, Playwright                        |
 
 ## License
 

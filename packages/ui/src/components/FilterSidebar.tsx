@@ -1,4 +1,5 @@
 import { For, Show, createSignal } from "solid-js";
+import { X } from "./icons";
 
 interface FilterMeta {
   models: Array<{ name: string; count: number }>;
@@ -116,14 +117,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
               onClick={props.onClose}
               class="rounded p-1 text-[color:var(--text-muted)] hover:bg-[#173764] hover:text-[color:var(--text)]"
             >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X size={24} />
             </button>
           </div>
 
@@ -132,7 +126,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
               <span class="text-sm font-medium">
                 Filters
                 <Show when={activeFilterCount() > 0}>
-                  <span class="ll-chip ml-2 px-2 py-0.5 text-xs font-medium">
+                  <span class="tag ml-2 px-2 py-0.5 text-xs font-medium">
                     {activeFilterCount()}
                   </span>
                 </Show>
@@ -154,7 +148,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                 <select
                   value={props.filters.sort}
                   onChange={handleSortChange}
-                  class="ll-select px-3 py-2 text-sm"
+                  class="select px-3 py-2 text-sm"
                 >
                   <For each={sortOptions}>
                     {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -166,7 +160,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                 <label class="mb-2 block text-sm font-medium">Model</label>
                 <div class="max-h-48 space-y-2 overflow-y-auto rounded border border-[color:var(--border)] bg-[color:var(--surface)] p-2">
                   <Show when={!props.meta?.models.length}>
-                    <p class="ll-muted text-sm">No models available</p>
+                    <p class="text-muted text-sm">No models available</p>
                   </Show>
                   <For each={props.meta?.models ?? []}>
                     {(model) => (
@@ -178,7 +172,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
                         />
                         <span class="truncate">{model.name}</span>
-                        <span class="ll-muted ml-auto text-xs">({model.count})</span>
+                        <span class="text-muted ml-auto text-xs">({model.count})</span>
                       </label>
                     )}
                   </For>
@@ -192,11 +186,11 @@ export function FilterSidebar(props: FilterSidebarProps) {
                   placeholder="Search GPUs..."
                   value={gpuSearch()}
                   onInput={(e) => setGpuSearch(e.currentTarget.value)}
-                  class="ll-input mb-2 px-2 py-1 text-sm"
+                  class="input mb-2 px-2 py-1 text-sm"
                 />
                 <div class="max-h-48 space-y-2 overflow-y-auto rounded border border-[color:var(--border)] bg-[color:var(--surface)] p-2">
                   <Show when={!filteredGpus().length}>
-                    <p class="ll-muted text-sm">No GPUs found</p>
+                    <p class="text-muted text-sm">No GPUs found</p>
                   </Show>
                   <For each={filteredGpus()}>
                     {(gpu) => (
@@ -208,7 +202,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
                         />
                         <span class="truncate">{gpu.name}</span>
-                        <span class="ll-muted ml-auto text-xs">({gpu.count})</span>
+                        <span class="text-muted ml-auto text-xs">({gpu.count})</span>
                       </label>
                     )}
                   </For>
@@ -222,7 +216,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                   placeholder="e.g., Ryzen 9"
                   value={props.filters.cpu}
                   onInput={handleCpuChange}
-                  class="ll-input px-3 py-2 text-sm"
+                  class="input px-3 py-2 text-sm"
                 />
               </div>
 
@@ -230,7 +224,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                 <label class="mb-2 block text-sm font-medium">Quantization</label>
                 <div class="flex flex-wrap gap-2">
                   <Show when={!props.meta?.quantizations.length}>
-                    <p class="ll-muted text-sm">No quantizations available</p>
+                    <p class="text-muted text-sm">No quantizations available</p>
                   </Show>
                   <For each={props.meta?.quantizations ?? []}>
                     {(q) => (
@@ -252,7 +246,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                 <label class="mb-2 block text-sm font-medium">Runtime</label>
                 <div class="flex flex-wrap gap-2">
                   <Show when={!props.meta?.runtimes.length}>
-                    <p class="ll-muted text-sm">No runtimes available</p>
+                    <p class="text-muted text-sm">No runtimes available</p>
                   </Show>
                   <For each={props.meta?.runtimes ?? []}>
                     {(r) => (
@@ -279,7 +273,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
                   placeholder="Any"
                   value={props.filters.minTps ?? ""}
                   onChange={handleMinTpsChange}
-                  class="ll-input px-3 py-2 text-sm"
+                  class="input px-3 py-2 text-sm"
                 />
               </div>
             </div>

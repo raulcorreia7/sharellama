@@ -1,18 +1,24 @@
-import { createSignal, createEffect, on } from "solid-js";
+import { createSignal, createEffect, on, Show } from "solid-js";
+import { Search, X } from "./icons";
 import { useDebounce } from "../lib/useDebounce";
+import { SearchSuggestions } from "./SearchSuggestions";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   debounceMs?: number;
+  showSuggestions?: boolean;
 }
 
 export function SearchBar(props: SearchBarProps) {
   const placeholder = () => props.placeholder ?? "Search submissions...";
   const debounceMs = () => props.debounceMs ?? 300;
+  const showSuggestions = () => props.showSuggestions ?? false;
 
   const [localValue, setLocalValue] = createSignal(props.value);
+  const [isFocused, setIsFocused] = createSignal(false);
+  const [showDropdown, setShowDropdown] = createSignal(false);
 
   const debouncedValue = useDebounce(localValue, debounceMs());
 
@@ -35,6 +41,15 @@ export function SearchBar(props: SearchBarProps) {
     ),
   );
 
+  createEffect(
+    on(
+      () => [isFocused(), localValue(), showSuggestions()] as const,
+      ([focused, value, canShow]) => {
+        setShowDropdown(focused && value === "" && canShow);
+      },
+    ),
+  );
+
   const handleInput = (e: Event) => {
     const target = e.target as HTMLInputElement;
     setLocalValue(target.value);
@@ -45,41 +60,45 @@ export function SearchBar(props: SearchBarProps) {
     props.onChange("");
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  const handleSelectSuggestion = (model: string) => {
+    setLocalValue(model);
+    props.onChange(model);
+  };
+
+  const handleCloseSuggestions = () => {
+    setShowDropdown(false);
+  };
+
   return (
-    <div class="relative">
-      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-        <svg class="ll-muted h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+    <div class="search">
+      <div class="search-icon">
+        <Search size={20} />
       </div>
       <input
         type="text"
         value={localValue()}
         onInput={handleInput}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder={placeholder()}
-        class="ll-input py-2 pl-10 pr-10 text-sm"
+        class="input input--with-icon text-sm"
       />
-      {localValue() && (
-        <button
-          type="button"
-          onClick={handleClear}
-          class="ll-muted absolute inset-y-0 right-0 flex items-center pr-3 hover:text-[color:var(--text)]"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+      <Show when={localValue()}>
+        <button type="button" onClick={handleClear} class="search-clear">
+          <X size={20} />
         </button>
-      )}
+      </Show>
+      <Show when={showDropdown()}>
+        <SearchSuggestions onSelect={handleSelectSuggestion} onClose={handleCloseSuggestions} />
+      </Show>
     </div>
   );
 }

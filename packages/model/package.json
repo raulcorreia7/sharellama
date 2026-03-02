@@ -9,6 +9,10 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./config": {
+      "import": "./dist/config/index.js",
+      "types": "./dist/config/index.d.ts"
+    },
     "./schemas/submission": {
       "import": "./dist/schemas/submission.js",
       "types": "./dist/schemas/submission.d.ts"
@@ -20,6 +24,10 @@
     "./schemas/comment": {
       "import": "./dist/schemas/comment.js",
       "types": "./dist/schemas/comment.d.ts"
+    },
+    "./schemas/model": {
+      "import": "./dist/schemas/model.js",
+      "types": "./dist/schemas/model.d.ts"
     }
   },
   "scripts": {
@@ -28,10 +36,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "@sharellama/core": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
-    "typescript": "^5.8.2"
+    "@types/node": "^25.3.3",
+    "typescript": "^5.9.3"
   }
 }

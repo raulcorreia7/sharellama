@@ -1,10 +1,14 @@
 import { Title } from "@solidjs/meta";
-import { createSignal, createResource, For, Show, createEffect, on } from "solid-js";
+import { createSignal, For, Show, createEffect, on } from "solid-js";
 import { useSearchParams } from "@solidjs/router";
-import { api, type SubmissionFilters } from "../../lib/api";
+import { api, type SubmissionFilters, DEFAULT_META, DEFAULT_SUBMISSIONS } from "../../lib/api";
+import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
 import { SubmissionCard } from "../../components/SubmissionCard";
 import { FilterSidebar, defaultFilters, type FilterState } from "../../components/FilterSidebar";
 import { SearchBar } from "../../components/SearchBar";
+import { Layout, Breadcrumbs, PageHeader, EmptyState, LoadingState } from "../../components/layout";
+import { Button } from "../../components/display/Button";
+import { Plus, Filter, ChevronLeft, ChevronRight, X } from "../../components/icons";
 
 function parseFiltersFromParams(params: Record<string, string | undefined>): FilterState {
   return {
@@ -54,7 +58,7 @@ export default function SubmissionsList() {
   const [page, setPage] = createSignal(1);
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
 
-  const [meta] = createResource(() => api.getSubmissionsMeta());
+  const meta = useResourceWithDefault(() => api.getSubmissionsMeta(), DEFAULT_META);
 
   const apiFilters = (): SubmissionFilters => ({
     ...filters(),
@@ -62,7 +66,18 @@ export default function SubmissionsList() {
     limit: 20,
   });
 
-  const [submissions] = createResource(apiFilters, (f) => api.getSubmissions(f));
+  const submissions = useResourceWithDefault(
+    apiFilters,
+    (f) => api.getSubmissions(f),
+    DEFAULT_SUBMISSIONS,
+  );
+
+  const stats = useResourceWithDefault(() => api.getStats(), {
+    totalSubmissions: 0,
+    totalVotes: 0,
+    uniqueGpus: 0,
+    uniqueModels: 0,
+  });
 
   createEffect(
     on(
@@ -102,66 +117,43 @@ export default function SubmissionsList() {
     !submissions.loading && submissions() && page() < submissions()!.pagination.totalPages;
   const activeFilterCount = () => countActiveFilters(filters());
 
+  const footerStats = () => {
+    if (stats.loading || !stats()) return undefined;
+    return {
+      totalSubmissions: stats()!.totalSubmissions,
+      uniqueModels: stats()!.uniqueModels,
+      uniqueGpus: stats()!.uniqueGpus,
+    };
+  };
+
   return (
-    <main class="ll-page max-w-7xl">
+    <Layout stats={footerStats()}>
       <Title>Submissions - ShareLlama</Title>
 
-      <nav class="mb-8 flex items-center gap-2 text-sm">
-        <a href="/" class="ll-nav-link">
-          Home
-        </a>
-        <span class="text-[color:var(--text-dim)]">/</span>
-        <span class="font-medium text-[color:var(--text)]">Submissions</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Submissions" }]} />
 
-      <header class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-display text-2xl font-bold">Submissions</h1>
-          <p class="text-sm text-[color:var(--text-muted)]">
-            Community benchmarks and configurations
-          </p>
-        </div>
-        <a href="/submit" class="ll-btn ll-btn-primary ll-btn-sm">
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Submit
-        </a>
-      </header>
+      <PageHeader
+        title="Submissions"
+        description="Community benchmarks and configurations"
+        actions={
+          <a href="/submit" class="btn btn--primary btn--sm">
+            <Plus size={14} />
+            Submit
+          </a>
+        }
+      />
 
-      <div class="mb-4 flex items-center gap-4 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          class="ll-btn ll-btn-secondary ll-btn-sm"
-        >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
+      <div class="filter-toggle lg:hidden" style={{ "margin-bottom": "1rem" }}>
+        <Button type="button" onClick={() => setSidebarOpen(true)} variant="secondary" size="sm">
+          <Filter size={14} />
           Filters
           <Show when={activeFilterCount() > 0}>
-            <span class="ll-chip">{activeFilterCount()}</span>
+            <span class="tag">{activeFilterCount()}</span>
           </Show>
-        </button>
+        </Button>
       </div>
 
-      <div class="flex gap-6">
+      <div class="submissions-layout">
         <FilterSidebar
           filters={filters()}
           onChange={handleFiltersChange}
@@ -170,56 +162,53 @@ export default function SubmissionsList() {
           onClose={() => setSidebarOpen(false)}
         />
 
-        <div class="flex-1">
-          <div class="mb-4">
+        <div class="submissions-main">
+          <div style={{ "margin-bottom": "1rem" }}>
             <SearchBar
               value={filters().q}
               onChange={handleSearchChange}
               placeholder="Search by title, description, or model..."
+              showSuggestions={true}
             />
           </div>
 
           <Show when={activeFilterCount() > 0}>
-            <div class="mb-4 flex flex-wrap items-center gap-2">
-              <span class="text-sm text-[color:var(--text-muted)]">Filters:</span>
+            <div class="active-filters" style={{ "margin-bottom": "1rem" }}>
+              <span class="text-muted" style={{ "font-size": "0.875rem" }}>
+                Filters:
+              </span>
               <For each={filters().model}>
                 {(m) => (
-                  <button type="button" onClick={() => removeFilter("model", m)} class="ll-chip">
+                  <button
+                    type="button"
+                    onClick={() => removeFilter("model", m)}
+                    class="tag tag--removable"
+                  >
                     Model: {m}
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
+                    <X size={12} />
                   </button>
                 )}
               </For>
               <For each={filters().gpu}>
                 {(g) => (
-                  <button type="button" onClick={() => removeFilter("gpu", g)} class="ll-chip">
+                  <button
+                    type="button"
+                    onClick={() => removeFilter("gpu", g)}
+                    class="tag tag--removable"
+                  >
                     GPU: {g}
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
+                    <X size={12} />
                   </button>
                 )}
               </For>
               <Show when={filters().cpu}>
-                <button type="button" onClick={() => removeFilter("cpu")} class="ll-chip">
+                <button
+                  type="button"
+                  onClick={() => removeFilter("cpu")}
+                  class="tag tag--removable"
+                >
                   CPU: {filters().cpu}
-                  <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fill-rule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
+                  <X size={12} />
                 </button>
               </Show>
               <For each={filters().quantization}>
@@ -227,132 +216,98 @@ export default function SubmissionsList() {
                   <button
                     type="button"
                     onClick={() => removeFilter("quantization", q)}
-                    class="ll-chip"
+                    class="tag tag--removable"
                   >
                     Quant: {q}
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
+                    <X size={12} />
                   </button>
                 )}
               </For>
               <For each={filters().runtime}>
                 {(r) => (
-                  <button type="button" onClick={() => removeFilter("runtime", r)} class="ll-chip">
+                  <button
+                    type="button"
+                    onClick={() => removeFilter("runtime", r)}
+                    class="tag tag--removable"
+                  >
                     Runtime: {r}
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
+                    <X size={12} />
                   </button>
                 )}
               </For>
               <Show when={filters().minTps !== undefined}>
-                <button type="button" onClick={() => removeFilter("minTps")} class="ll-chip">
+                <button
+                  type="button"
+                  onClick={() => removeFilter("minTps")}
+                  class="tag tag--removable"
+                >
                   Min tok/s: {filters().minTps}
-                  <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fill-rule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
+                  <X size={12} />
                 </button>
               </Show>
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                class="text-sm text-[color:var(--accent-text)] hover:underline"
-              >
+              <button type="button" onClick={clearAllFilters} class="link">
                 Clear all
               </button>
             </div>
           </Show>
 
           <Show when={submissions.loading}>
-            <div class="py-12 text-center text-[color:var(--text-muted)]">Loading...</div>
-          </Show>
-
-          <Show when={submissions.error}>
-            <div class="ll-card border-red-500/50 bg-red-500/10 p-4 text-red-400">
-              Error loading submissions: {submissions.error?.message}
-            </div>
+            <LoadingState />
           </Show>
 
           <Show when={!submissions.loading && submissions()}>
-            <div class="mb-4 text-sm text-[color:var(--text-muted)]">
+            <div class="text-muted" style={{ "font-size": "0.875rem", "margin-bottom": "1rem" }}>
               {submissions()!.pagination.total} submission
               {submissions()!.pagination.total !== 1 ? "s" : ""}
             </div>
 
             <Show when={submissions()!.data.length === 0}>
-              <div class="ll-card p-8 text-center">
-                <p class="text-[color:var(--text-muted)]">
-                  No submissions found matching your criteria.
-                </p>
-                <button type="button" onClick={clearAllFilters} class="ll-btn ll-btn-ghost mt-2">
-                  Clear all filters
-                </button>
-              </div>
+              <EmptyState
+                message="No submissions found matching your criteria."
+                action={
+                  <Button type="button" onClick={clearAllFilters} variant="ghost">
+                    Clear all filters
+                  </Button>
+                }
+              />
             </Show>
 
-            <div class="stagger-in grid gap-4 sm:grid-cols-2">
+            <div class="stagger-in submissions-grid">
               <For each={submissions()!.data}>
                 {(submission) => <SubmissionCard submission={submission} />}
               </For>
             </div>
 
             <Show when={submissions()!.pagination.totalPages > 1}>
-              <nav class="mt-8 flex items-center justify-center gap-4">
-                <button
+              <nav class="pagination">
+                <Button
                   type="button"
                   onClick={() => setPage((p) => p - 1)}
                   disabled={!canGoBack()}
-                  class="ll-btn ll-btn-secondary ll-btn-sm disabled:opacity-50"
+                  variant="secondary"
+                  size="sm"
                 >
-                  <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
+                  <ChevronLeft size={14} />
                   Previous
-                </button>
-                <span class="text-mono text-sm text-[color:var(--text-muted)]">
+                </Button>
+                <span class="font-mono" style={{ "font-size": "0.875rem" }}>
                   {page()} / {submissions()!.pagination.totalPages}
                 </span>
-                <button
+                <Button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!canGoForward()}
-                  class="ll-btn ll-btn-secondary ll-btn-sm disabled:opacity-50"
+                  variant="secondary"
+                  size="sm"
                 >
                   Next
-                  <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                  <ChevronRight size={14} />
+                </Button>
               </nav>
             </Show>
           </Show>
         </div>
       </div>
-    </main>
+    </Layout>
   );
 }

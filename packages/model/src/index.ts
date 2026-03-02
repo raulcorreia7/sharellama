@@ -6,13 +6,16 @@ export const submissionSchema = z.object({
   cpu: z.string().max(200).optional(),
   gpu: z.string().max(200).optional(),
   ramGb: z.number().int().positive().optional(),
+  vramGb: z.number().int().positive().optional(),
   runtime: z.string().min(1).max(50),
   runtimeVersion: z.string().max(50).optional(),
-  modelName: z.string().min(1).max(100),
+  modelSlug: z.string().min(1).max(255),
   quantization: z.string().max(50).optional(),
+  quantSource: z.string().max(200).optional(),
+  quantUrl: z.string().max(500).optional(),
   contextLength: z.number().int().positive().optional(),
   command: z.string().optional(),
-  inferenceParams: z.record(z.unknown()).optional(),
+  inferenceParams: z.record(z.string(), z.unknown()).optional(),
   temperature: z.number().min(0).max(2).optional(),
   topP: z.number().min(0).max(1).optional(),
   topK: z.number().int().positive().optional(),
@@ -28,7 +31,7 @@ export const submissionSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
-export const submissionUpdateSchema = submissionSchema.partial();
+export const submissionUpdateSchema = submissionSchema.partial().omit({ modelSlug: true });
 
 export type SubmissionInput = z.infer<typeof submissionSchema>;
 export type SubmissionUpdate = z.infer<typeof submissionUpdateSchema>;
@@ -41,10 +44,13 @@ export interface Submission {
   cpu: string | null;
   gpu: string | null;
   ramGb: number | null;
+  vramGb: number | null;
   runtime: string;
   runtimeVersion: string | null;
-  modelName: string;
+  modelSlug: string;
   quantization: string | null;
+  quantSource: string | null;
+  quantUrl: string | null;
   contextLength: number | null;
   command: string | null;
   inferenceParams: Record<string, unknown> | null;
@@ -82,3 +88,5 @@ export interface ApiError {
 export * from "./schemas/submission.js";
 export * from "./schemas/vote.js";
 export * from "./schemas/comment.js";
+export * from "./schemas/model.js";
+export * from "./config/index.js";

@@ -27,7 +27,7 @@ export function CommentThread(props: CommentThreadProps) {
   const [turnstileToken, setTurnstileToken] = createSignal("");
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-  let refreshTrigger = createSignal(0);
+  const refreshTrigger = createSignal(0);
 
   const fetchComments = async () => {
     refreshTrigger[0]();
@@ -83,11 +83,11 @@ export function CommentThread(props: CommentThreadProps) {
         <h2 class="text-lg font-semibold">Comments ({commentCount()})</h2>
         <Show when={comments() && comments()!.length > 0}>
           <div class="flex items-center gap-2">
-            <span class="ll-muted text-sm">Sort:</span>
+            <span class="text-muted text-sm">Sort:</span>
             <select
               value={sortBy()}
               onChange={(e) => setSortBy(e.currentTarget.value as SortOption)}
-              class="ll-select px-2 py-1 text-sm"
+              class="select px-2 py-1 text-sm"
             >
               <option value="top">Top</option>
               <option value="newest">Newest</option>
@@ -102,7 +102,7 @@ export function CommentThread(props: CommentThreadProps) {
           onInput={(e) => setNewCommentBody(e.currentTarget.value)}
           placeholder="Add a comment..."
           rows={3}
-          class="ll-textarea p-3 text-sm"
+          class="textarea p-3 text-sm"
           disabled={isSubmitting()}
         />
         <div class="mt-3 flex items-center gap-4">
@@ -110,7 +110,7 @@ export function CommentThread(props: CommentThreadProps) {
           <button
             type="submit"
             disabled={!newCommentBody().trim() || !turnstileToken() || isSubmitting()}
-            class="ll-btn-primary px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+            class="btn--primary px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting() ? "Posting..." : "Post Comment"}
           </button>
@@ -120,7 +120,7 @@ export function CommentThread(props: CommentThreadProps) {
         </div>
       </form>
 
-      <Suspense fallback={<div class="ll-muted py-4 text-center">Loading comments...</div>}>
+      <Suspense fallback={<div class="text-muted py-4 text-center">Loading comments...</div>}>
         <Show when={comments.error}>
           <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
             Error loading comments: {comments.error?.message}
@@ -128,14 +128,14 @@ export function CommentThread(props: CommentThreadProps) {
         </Show>
 
         <Show when={comments() && comments()!.length === 0}>
-          <p class="ll-muted py-8 text-center">No comments yet. Be the first to comment!</p>
+          <p class="text-muted py-8 text-center">No comments yet. Be the first to comment!</p>
         </Show>
 
         <Show when={comments() && comments()!.length > 0}>
           <div class="space-y-4">
             <For each={sortedComments()}>
               {(comment) => (
-                <div class="ll-card p-4">
+                <div class="card p-4">
                   <CommentItem
                     comment={comment}
                     fingerprint={props.fingerprint}

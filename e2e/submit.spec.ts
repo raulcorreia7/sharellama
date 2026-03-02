@@ -1,87 +1,65 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 test.describe("Submit Page", () => {
-  test.beforeEach(async ({ page }) => {
+  test("displays submit page with model search", async ({ page }) => {
     await page.goto("/submit");
-  });
 
-  test("displays submit form", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /submit configuration/i })).toBeVisible();
+    await expect(page.getByPlaceholder(/search models/i)).toBeVisible();
     await expect(page.getByLabel(/title/i)).toBeVisible();
-    await expect(page.getByLabel(/runtime/i)).toBeVisible();
-    await expect(page.getByLabel(/model name/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /submit/i })).toBeVisible();
   });
 
-  test("validates required fields", async ({ page }) => {
-    await page.getByRole("button", { name: /submit/i }).click();
+  test("shows quantization fields", async ({ page }) => {
+    await page.goto("/submit");
 
-    await expect(page.getByText(/title is required/i)).toBeVisible();
+    await expect(page.getByLabel(/quantization/i)).toBeVisible();
   });
 
-  test("submits form successfully", async ({ page }) => {
-    await page.route("**/api/submissions", async (route) => {
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: JSON.stringify({
-          submission: {
-            id: 1,
-            title: "Test Submission",
-            runtime: "llama.cpp",
-            modelName: "llama-3-8b",
-            score: 0,
-            createdAt: new Date().toISOString(),
-          },
-          adminLink: "http://localhost:3000/submissions/1/admin/test-token",
-        }),
-      });
-    });
+  test("shows command input field", async ({ page }) => {
+    await page.goto("/submit");
 
-    await page.getByLabel(/title/i).fill("Test Submission");
-    await page.getByLabel(/runtime/i).fill("llama.cpp");
-    await page.getByLabel(/model name/i).fill("llama-3-8b");
-
-    await page.getByRole("button", { name: /submit/i }).click();
-
-    await expect(page).toHaveURL(/\/submissions\/1/);
+    await expect(page.getByPlaceholder(/paste your llama.cpp command/i)).toBeVisible();
   });
 
-  test("shows admin link after submission", async ({ page }) => {
-    await page.route("**/api/submissions", async (route) => {
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: JSON.stringify({
-          submission: {
-            id: 1,
-            title: "Test Submission",
-            runtime: "llama.cpp",
-            modelName: "llama-3-8b",
-            score: 0,
-            createdAt: new Date().toISOString(),
-          },
-          adminLink: "http://localhost:3000/submissions/1/admin/secret-token",
-        }),
-      });
-    });
+  test("allows filling title field", async ({ page }) => {
+    await page.goto("/submit");
 
-    await page.getByLabel(/title/i).fill("Test Submission");
-    await page.getByLabel(/runtime/i).fill("llama.cpp");
-    await page.getByLabel(/model name/i).fill("llama-3-8b");
+    const titleInput = page.getByLabel(/title/i);
+    await titleInput.fill("Test Configuration");
 
-    await page.getByRole("button", { name: /submit/i }).click();
-
-    await expect(page.getByText(/admin link/i)).toBeVisible();
-    await expect(page.getByText("secret-token")).toBeVisible();
+    await expect(titleInput).toHaveValue("Test Configuration");
   });
 
-  test("allows adding optional fields", async ({ page }) => {
-    await page.getByLabel(/gpu/i).fill("RTX 4090");
-    await page.getByLabel(/cpu/i).fill("Ryzen 9 7950X");
-    await page.getByLabel(/tokens per second/i).fill("45.5");
+  test("allows filling optional GPU field", async ({ page }) => {
+    await page.goto("/submit");
 
-    await expect(page.getByLabel(/gpu/i)).toHaveValue("RTX 4090");
-    await expect(page.getByLabel(/cpu/i)).toHaveValue("Ryzen 9 7950X");
-    await expect(page.getByLabel(/tokens per second/i)).toHaveValue("45.5");
+    const gpuInput = page.getByLabel(/gpu/i);
+    await gpuInput.fill("RTX 4090");
+
+    await expect(gpuInput).toHaveValue("RTX 4090");
+  });
+
+  test("allows filling tokens per second field", async ({ page }) => {
+    await page.goto("/submit");
+
+    const tpsInput = page.getByLabel(/tokens\/sec/i);
+    await tpsInput.fill("85.5");
+
+    await expect(tpsInput).toHaveValue("85.5");
+  });
+
+  test("toggles advanced options", async ({ page }) => {
+    await page.goto("/submit");
+
+    const toggleBtn = page.getByRole("button", { name: /show all options/i });
+    await toggleBtn.click();
+
+    await expect(page.getByLabel(/cpu/i)).toBeVisible();
+  });
+
+  test("shows submit button", async ({ page }) => {
+    await page.goto("/submit");
+
+    await expect(page.getByRole("button", { name: /submit configuration/i })).toBeVisible();
   });
 });

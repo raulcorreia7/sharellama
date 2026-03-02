@@ -2,8 +2,9 @@ import { Hono, type Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, desc, asc, sql, and, gte, lte, or } from "drizzle-orm";
 import type { Env } from "../env";
+import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { submissions, votes } from "@sharellama/database";
+import { submissions, votes, models } from "@sharellama/database";
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
@@ -58,13 +59,29 @@ function sanitizeForResponse(
   return rest;
 }
 
+async function getOrCreateModel(db: ReturnType<typeof getDb>, slug: string): Promise<void> {
+  const existing = await db.select().from(models).where(eq(models.slug, slug)).limit(1);
+  if (existing[0]) return;
+
+  const [org, ...nameParts] = slug.split("/");
+  const name = nameParts.join("/");
+
+  await db.insert(models).values({
+    slug,
+    name,
+    org: org || null,
+    configCount: 0,
+  });
+}
+
 app.post(
   "/",
   rateLimitSubmission,
   verifyTurnstile(),
   zValidator("json", createSubmissionSchema),
   async (c) => {
-    const db = getDb(c.env.DATABASE_URL);
+    const config = getConfig(c.env);
+    const db = getDb(config.db.url);
     const data = c.req.valid("json");
 
     const fingerprint = c.req.header("X-Fingerprint");
@@ -74,6 +91,8 @@ app.post(
 
     const authorHash = await hashFingerprint(fingerprint);
     const editToken = await generateToken(32);
+
+    await getOrCreateModel(db, data.modelSlug);
 
     const [submission] = await db
       .insert(submissions)
@@ -90,7 +109,12 @@ app.post(
       return c.json({ error: "Failed to create submission" }, 500);
     }
 
-    const baseUrl = c.env.BASE_URL ?? new URL(c.req.url).origin;
+    await db
+      .update(models)
+      .set({ configCount: sql`${models.configCount} + 1` })
+      .where(eq(models.slug, data.modelSlug));
+
+    const baseUrl = config.api.baseUrl ?? new URL(c.req.url).origin;
     const adminLink = `${baseUrl}/submissions/${submission.id}/admin/${editToken}`;
 
     return c.json(
@@ -104,11 +128,28 @@ app.post(
 );
 
 app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const query = c.req.valid("query");
 
-  const { page, limit, sort, order, q, model, gpu, cpu, quantization, runtime, minTps, maxTps } =
-    query;
+  const {
+    page,
+    limit,
+    sort,
+    order,
+    q,
+    modelSlug,
+    gpu,
+    cpu,
+    quantization,
+    runtime,
+    quantSource,
+    vramMin,
+    vramMax,
+    ramMin,
+    ramMax,
+    minTps,
+    maxTps,
+  } = query;
   const offset = (page - 1) * limit;
 
   const conditions = [];
@@ -118,25 +159,30 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
       or(
         sql`${submissions.title} ILIKE ${searchPattern}`,
         sql`${submissions.description} ILIKE ${searchPattern}`,
-        sql`${submissions.modelName} ILIKE ${searchPattern}`,
       ),
     );
   }
-  if (model) conditions.push(sql`${submissions.modelName} ILIKE ${`%${model}%`}`);
+  if (modelSlug) conditions.push(eq(submissions.modelSlug, modelSlug));
   if (gpu) conditions.push(sql`${submissions.gpu} ILIKE ${`%${gpu}%`}`);
   if (cpu) conditions.push(sql`${submissions.cpu} ILIKE ${`%${cpu}%`}`);
   if (quantization) conditions.push(eq(submissions.quantization, quantization));
   if (runtime) conditions.push(eq(submissions.runtime, runtime));
+  if (quantSource) conditions.push(eq(submissions.quantSource, quantSource));
+  if (vramMin !== undefined) conditions.push(gte(submissions.vramGb, vramMin));
+  if (vramMax !== undefined) conditions.push(lte(submissions.vramGb, vramMax));
+  if (ramMin !== undefined) conditions.push(gte(submissions.ramGb, ramMin));
+  if (ramMax !== undefined) conditions.push(lte(submissions.ramGb, ramMax));
   if (minTps !== undefined) conditions.push(gte(submissions.tokensPerSecond, minTps));
   if (maxTps !== undefined) conditions.push(lte(submissions.tokensPerSecond, maxTps));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const sortColumn = {
-    score: submissions.score,
-    createdAt: submissions.createdAt,
-    tokensPerSecond: submissions.tokensPerSecond,
-  }[sort];
+  const sortColumn =
+    {
+      score: submissions.score,
+      createdAt: submissions.createdAt,
+      tokensPerSecond: submissions.tokensPerSecond,
+    }[sort] ?? submissions.createdAt;
 
   const orderByFn = order === "asc" ? asc : desc;
 
@@ -184,7 +230,7 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
 });
 
 app.get("/stats", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
 
   const [submissionCount, voteStats, uniqueGpus, uniqueModels] = await Promise.all([
     db
@@ -201,7 +247,7 @@ app.get("/stats", async (c) => {
       .where(sql`${submissions.gpu} IS NOT NULL`)
       .then((r) => Number(r[0]?.count ?? 0)),
     db
-      .select({ count: sql<number>`count(distinct ${submissions.modelName})` })
+      .select({ count: sql<number>`count(distinct ${submissions.modelSlug})` })
       .from(submissions)
       .then((r) => Number(r[0]?.count ?? 0)),
   ]);
@@ -215,16 +261,16 @@ app.get("/stats", async (c) => {
 });
 
 app.get("/meta", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
 
-  const [models, gpus, runtimes, quantizations] = await Promise.all([
+  const [modelSlugs, gpus, runtimes, quantizations, quantSources] = await Promise.all([
     db
       .select({
-        name: submissions.modelName,
+        slug: submissions.modelSlug,
         count: sql<number>`count(*)`.as("count"),
       })
       .from(submissions)
-      .groupBy(submissions.modelName)
+      .groupBy(submissions.modelSlug)
       .orderBy(desc(sql`count(*)`)),
     db
       .select({
@@ -252,20 +298,32 @@ app.get("/meta", async (c) => {
       .where(sql`${submissions.quantization} IS NOT NULL`)
       .groupBy(submissions.quantization)
       .orderBy(desc(sql`count(*)`)),
+    db
+      .select({
+        name: submissions.quantSource,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(submissions)
+      .where(sql`${submissions.quantSource} IS NOT NULL`)
+      .groupBy(submissions.quantSource)
+      .orderBy(desc(sql`count(*)`)),
   ]);
 
   return c.json({
-    models: models.filter((m) => m.name).map((m) => ({ name: m.name, count: Number(m.count) })),
+    models: modelSlugs.map((m) => ({ name: m.slug, count: Number(m.count) })),
     gpus: gpus.filter((g) => g.name).map((g) => ({ name: g.name, count: Number(g.count) })),
     runtimes: runtimes.map((r) => ({ name: r.name, count: Number(r.count) })),
     quantizations: quantizations
+      .filter((q) => q.name)
+      .map((q) => ({ name: q.name, count: Number(q.count) })),
+    quantSources: quantSources
       .filter((q) => q.name)
       .map((q) => ({ name: q.name, count: Number(q.count) })),
   });
 });
 
 app.get("/:id", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const id = parseInt(c.req.param("id"), 10);
 
   if (isNaN(id)) {
@@ -289,7 +347,7 @@ app.get("/:id", async (c) => {
 });
 
 app.patch("/:id/admin/:token", zValidator("json", updateSubmissionSchema), async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const id = parseInt(c.req.param("id"), 10);
   const token = c.req.param("token");
 
@@ -326,7 +384,7 @@ app.patch("/:id/admin/:token", zValidator("json", updateSubmissionSchema), async
 });
 
 app.delete("/:id/admin/:token", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const id = parseInt(c.req.param("id"), 10);
   const token = c.req.param("token");
 
@@ -344,7 +402,14 @@ app.delete("/:id/admin/:token", async (c) => {
     return c.json({ error: "Invalid admin token" }, 403);
   }
 
+  const modelSlug = existing[0].modelSlug;
+
   await db.delete(submissions).where(eq(submissions.id, id));
+
+  await db
+    .update(models)
+    .set({ configCount: sql`GREATEST(0, ${models.configCount} - 1)` })
+    .where(eq(models.slug, modelSlug));
 
   return c.body(null, 204);
 });

@@ -106,13 +106,13 @@ export function CommentItem(props: CommentItemProps) {
         <div class="shrink-0 w-1 rounded bg-[#274b78]" />
       </Show>
       <div class="flex-1 min-w-0">
-        <header class="ll-muted mb-1 flex items-center gap-2 text-xs">
+        <header class="text-muted mb-1 flex items-center gap-2 text-xs">
           <span class="font-mono font-medium">{props.comment.authorHash}</span>
           <span>•</span>
           <time datetime={props.comment.createdAt}>{timeAgo(props.comment.createdAt)}</time>
         </header>
 
-        <p class={`mb-2 text-sm ${isDeleted() ? "ll-muted italic" : ""}`}>{props.comment.body}</p>
+        <p class={`mb-2 text-sm ${isDeleted() ? "text-muted italic" : ""}`}>{props.comment.body}</p>
 
         <div class="flex items-center gap-3 mb-2">
           <div class="flex items-center gap-0.5">
@@ -123,13 +123,13 @@ export function CommentItem(props: CommentItemProps) {
               class={`p-0.5 rounded text-xs transition-colors ${
                 userVote() === 1
                   ? "bg-[#173764] text-[#dbeafe]"
-                  : "ll-muted hover:text-[color:var(--text)]"
+                  : "text-muted hover:text-[color:var(--text)]"
               }`}
               aria-label="Upvote"
             >
               ▲
             </button>
-            <span class="ll-muted min-w-[1.5rem] text-center text-xs">{score()}</span>
+            <span class="text-muted min-w-[1.5rem] text-center text-xs">{score()}</span>
             <button
               type="button"
               onClick={() => handleVote(-1)}
@@ -137,7 +137,7 @@ export function CommentItem(props: CommentItemProps) {
               class={`p-0.5 rounded text-xs transition-colors ${
                 userVote() === -1
                   ? "bg-[#173764] text-[#dbeafe]"
-                  : "ll-muted hover:text-[color:var(--text)]"
+                  : "text-muted hover:text-[color:var(--text)]"
               }`}
               aria-label="Downvote"
             >
@@ -149,7 +149,7 @@ export function CommentItem(props: CommentItemProps) {
             <button
               type="button"
               onClick={() => setShowReplyForm(!showReplyForm())}
-              class="ll-muted text-xs hover:text-[color:var(--text)]"
+              class="text-muted text-xs hover:text-[color:var(--text)]"
             >
               {showReplyForm() ? "Cancel" : "Reply"}
             </button>
@@ -167,7 +167,7 @@ export function CommentItem(props: CommentItemProps) {
               onInput={(e) => setReplyBody(e.currentTarget.value)}
               placeholder="Write a reply..."
               rows={2}
-              class="ll-textarea p-2 text-sm"
+              class="textarea p-2 text-sm"
               disabled={isSubmitting()}
             />
             <div class="mt-2 flex items-center gap-3">
@@ -175,7 +175,7 @@ export function CommentItem(props: CommentItemProps) {
               <button
                 type="submit"
                 disabled={!replyBody().trim() || !turnstileToken() || isSubmitting()}
-                class="ll-btn-primary px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                class="btn--primary px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting() ? "Posting..." : "Reply"}
               </button>

@@ -3,6 +3,10 @@ import { createSignal, createResource, Show, For } from "solid-js";
 import { useParams, useNavigate, A } from "@solidjs/router";
 import { submissionUpdateSchema, type SubmissionUpdate } from "@sharellama/model";
 import { api } from "../../../../lib/api";
+import { Layout } from "../../../../components/layout";
+import { Breadcrumbs } from "../../../../components/layout/Breadcrumbs";
+import { Button } from "../../../../components/display/Button";
+import { Card } from "../../../../components/display/Card";
 
 type FormField = {
   name: keyof SubmissionUpdate;
@@ -28,6 +32,15 @@ const formSections: { title: string; fields: FormField[] }[] = [
       { name: "cpu", label: "CPU", type: "text" },
       { name: "gpu", label: "GPU", type: "text" },
       { name: "ramGb", label: "RAM (GB)", type: "number", min: 1 },
+      { name: "vramGb", label: "VRAM (GB)", type: "number", min: 1 },
+    ],
+  },
+  {
+    title: "Model Details",
+    fields: [
+      { name: "quantization", label: "Quantization", type: "text" },
+      { name: "quantSource", label: "Quant Source", type: "text" },
+      { name: "contextLength", label: "Context Length", type: "number", min: 1 },
     ],
   },
   {
@@ -35,14 +48,6 @@ const formSections: { title: string; fields: FormField[] }[] = [
     fields: [
       { name: "runtime", label: "Runtime", type: "text" },
       { name: "runtimeVersion", label: "Version", type: "text" },
-    ],
-  },
-  {
-    title: "Model",
-    fields: [
-      { name: "modelName", label: "Model Name", type: "text" },
-      { name: "quantization", label: "Quantization", type: "text" },
-      { name: "contextLength", label: "Context Length", type: "number", min: 1 },
     ],
   },
   {
@@ -104,10 +109,11 @@ export default function AdminEditPage() {
         cpu: s.cpu ?? undefined,
         gpu: s.gpu ?? undefined,
         ramGb: s.ramGb ?? undefined,
+        vramGb: s.vramGb ?? undefined,
         runtime: s.runtime,
         runtimeVersion: s.runtimeVersion ?? undefined,
-        modelName: s.modelName,
         quantization: s.quantization ?? undefined,
+        quantSource: s.quantSource ?? undefined,
         contextLength: s.contextLength ?? undefined,
         command: s.command ?? undefined,
         temperature: s.temperature ?? undefined,
@@ -176,7 +182,7 @@ export default function AdminEditPage() {
   };
 
   return (
-    <main class="ll-page max-w-2xl">
+    <Layout>
       <Title>
         <Show when={submission()} fallback="Loading...">
           Edit {submission()?.title}
@@ -184,26 +190,30 @@ export default function AdminEditPage() {
         - ShareLlama
       </Title>
 
-      <nav class="mb-6 flex items-center gap-4 text-sm">
-        <a href="/" class="ll-muted hover:text-[color:var(--text)]">
-          Home
-        </a>
-        <span class="ll-muted">/</span>
-        <a href="/submissions" class="ll-muted hover:text-[color:var(--text)]">
-          Submissions
-        </a>
-        <span class="ll-muted">/</span>
-        <span class="font-medium">Admin Edit</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Submissions", href: "/submissions" },
+          { label: "Admin Edit" },
+        ]}
+      />
 
       <Show when={submission.loading}>
-        <div class="ll-muted py-12 text-center">Loading...</div>
+        <div class="text-muted" style={{ padding: "3rem 0", "text-align": "center" }}>
+          Loading...
+        </div>
       </Show>
 
       <Show when={submission.error}>
-        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          Error: {submission.error?.message}
-        </div>
+        <Card
+          style={{
+            padding: "1rem",
+            "border-color": "var(--color-red-600)",
+            "background-color": "var(--color-red-100)",
+          }}
+        >
+          <p style={{ color: "var(--color-red-700)" }}>Error: {submission.error?.message}</p>
+        </Card>
       </Show>
 
       <Show when={submission()}>
@@ -211,12 +221,9 @@ export default function AdminEditPage() {
           initializeForm();
           return (
             <>
-              <div class="mb-6 flex items-center justify-between">
-                <h1 class="text-2xl font-bold">Edit Submission</h1>
-                <A
-                  href={`/submissions/${id()}`}
-                  class="text-sm text-[color:var(--brand)] hover:underline"
-                >
+              <div class="page-header">
+                <h1 class="page-title">Edit Submission</h1>
+                <A href={`/submissions/${id()}`} class="link">
                   View Submission
                 </A>
               </div>
@@ -224,128 +231,160 @@ export default function AdminEditPage() {
               <form onSubmit={handleUpdate}>
                 <For each={formSections}>
                   {(section) => (
-                    <fieldset class="ll-card mb-6 p-4">
-                      <legend class="ll-muted mb-3 text-sm font-semibold uppercase tracking-wide">
-                        {section.title}
-                      </legend>
-                      <div class="grid gap-4 sm:grid-cols-2">
-                        <For each={section.fields}>
-                          {(field) => (
-                            <div class={field.type === "textarea" ? "sm:col-span-2" : ""}>
-                              <label for={field.name} class="mb-1 block text-sm font-medium">
-                                {field.label}
-                              </label>
-                              <Show
-                                when={field.type === "textarea"}
-                                fallback={
-                                  <input
-                                    id={field.name}
-                                    type={field.type}
-                                    step={field.step}
-                                    min={field.min}
-                                    max={field.max}
-                                    value={String(formData()[field.name] ?? "")}
-                                    onInput={(e) =>
-                                      updateField(
-                                        field.name,
-                                        field.type === "number"
-                                          ? e.currentTarget.value
-                                            ? Number(e.currentTarget.value)
-                                            : undefined
-                                          : e.currentTarget.value || undefined,
-                                      )
-                                    }
-                                    class="ll-input px-3 py-2 text-sm"
-                                    classList={{
-                                      "border-red-500": !!errors()[field.name],
-                                    }}
-                                  />
+                    <div class="submit-section">
+                      <h2 class="submit-section-title">{section.title}</h2>
+                      <Card style={{ padding: "1rem" }}>
+                        <div class="submit-grid submit-grid--2col">
+                          <For each={section.fields}>
+                            {(field) => (
+                              <div
+                                class={
+                                  field.type === "textarea"
+                                    ? "submit-field submit-field--full"
+                                    : "submit-field"
                                 }
                               >
-                                <textarea
-                                  id={field.name}
-                                  value={String(formData()[field.name] ?? "")}
-                                  onInput={(e) =>
-                                    updateField(field.name, e.currentTarget.value || undefined)
+                                <label for={field.name} class="submit-label">
+                                  {field.label}
+                                </label>
+                                <Show
+                                  when={field.type === "textarea"}
+                                  fallback={
+                                    <input
+                                      id={field.name}
+                                      type={field.type}
+                                      step={field.step}
+                                      min={field.min}
+                                      max={field.max}
+                                      value={String(formData()[field.name] ?? "")}
+                                      onInput={(e) =>
+                                        updateField(
+                                          field.name,
+                                          field.type === "number"
+                                            ? e.currentTarget.value
+                                              ? Number(e.currentTarget.value)
+                                              : undefined
+                                            : e.currentTarget.value || undefined,
+                                        )
+                                      }
+                                      classList={{
+                                        input: true,
+                                        "input--error": !!errors()[field.name],
+                                      }}
+                                    />
                                   }
-                                  rows={3}
-                                  class="ll-textarea px-3 py-2 text-sm"
-                                  classList={{
-                                    "border-red-500": !!errors()[field.name],
-                                  }}
-                                />
-                              </Show>
-                              <Show when={errors()[field.name]}>
-                                <p class="mt-1 text-xs text-red-500">{errors()[field.name]}</p>
-                              </Show>
-                            </div>
-                          )}
-                        </For>
-                      </div>
-                    </fieldset>
+                                >
+                                  <textarea
+                                    id={field.name}
+                                    value={String(formData()[field.name] ?? "")}
+                                    onInput={(e) =>
+                                      updateField(field.name, e.currentTarget.value || undefined)
+                                    }
+                                    rows={3}
+                                    classList={{
+                                      textarea: true,
+                                      "input--error": !!errors()[field.name],
+                                    }}
+                                  />
+                                </Show>
+                                <Show when={errors()[field.name]}>
+                                  <p class="submit-error">{errors()[field.name]}</p>
+                                </Show>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      </Card>
+                    </div>
                   )}
                 </For>
 
                 <Show when={errors().submit}>
-                  <div class="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-                    {errors().submit}
-                  </div>
+                  <Card
+                    style={{
+                      padding: "0.75rem",
+                      "border-color": "var(--color-red-600)",
+                      "background-color": "var(--color-red-100",
+                      "margin-bottom": "1rem",
+                    }}
+                  >
+                    <p style={{ color: "var(--color-red-700)", "font-size": "0.875rem" }}>
+                      {errors().submit}
+                    </p>
+                  </Card>
                 </Show>
 
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={submitting()}
-                  class="ll-btn-primary mb-6 w-full px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  style={{ width: "100%", "margin-bottom": "2rem" }}
                 >
                   {submitting() ? "Saving..." : "Save Changes"}
-                </button>
+                </Button>
               </form>
 
-              <div class="border-t border-[color:var(--border)] pt-6">
-                <h2 class="ll-muted mb-3 text-sm font-semibold uppercase tracking-wide">
+              <Card style={{ padding: "1.5rem", "border-color": "var(--color-red-600)" }}>
+                <h2
+                  style={{
+                    "font-size": "0.75rem",
+                    "font-weight": 600,
+                    "text-transform": "uppercase",
+                    "letter-spacing": "0.05em",
+                    color: "var(--color-text-muted)",
+                    "margin-bottom": "1rem",
+                  }}
+                >
                   Danger Zone
                 </h2>
                 <Show when={errors().delete}>
-                  <div class="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                  <p
+                    style={{
+                      color: "var(--color-red-700)",
+                      "font-size": "0.875rem",
+                      "margin-bottom": "0.75rem",
+                    }}
+                  >
                     {errors().delete}
-                  </div>
+                  </p>
                 </Show>
                 <Show
                   when={showDeleteConfirm()}
                   fallback={
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       onClick={() => setShowDeleteConfirm(true)}
-                      class="rounded border border-red-600/70 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-950/40"
+                      style={{
+                        border: "1px solid var(--color-red-600)",
+                        color: "var(--color-red-600)",
+                      }}
                     >
                       Delete Submission
-                    </button>
+                    </Button>
                   }
                 >
-                  <p class="ll-muted mb-3 text-sm">Are you sure? This cannot be undone.</p>
-                  <div class="flex gap-2">
-                    <button
-                      type="button"
+                  <p class="text-muted text-sm" style={{ "margin-bottom": "0.75rem" }}>
+                    Are you sure? This cannot be undone.
+                  </p>
+                  <div class="submit-actions">
+                    <Button
+                      variant="primary"
                       onClick={handleDelete}
                       disabled={deleting()}
-                      class="ll-btn-danger px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      style={{ "background-color": "var(--color-red-600)" }}
                     >
                       {deleting() ? "Deleting..." : "Yes, Delete"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      class="ll-btn-secondary px-4 py-2 text-sm font-medium"
-                    >
+                    </Button>
+                    <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </Show>
-              </div>
+              </Card>
             </>
           );
         }}
       </Show>
-    </main>
+    </Layout>
   );
 }

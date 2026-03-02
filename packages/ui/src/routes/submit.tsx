@@ -1,41 +1,48 @@
 import { Title } from "@solidjs/meta";
-import { createSignal, Show, For } from "solid-js";
-import { A, useLocation } from "@solidjs/router";
-import { submissionSchema, type SubmissionInput } from "@sharellama/model";
-import { api } from "../lib/api";
+import { createSignal, Show, For, createEffect } from "solid-js";
+import { A } from "@solidjs/router";
+import { submissionSchema, type SubmissionInput, type HFModelResult } from "@sharellama/model";
+import { api, DEFAULT_STATS } from "../lib/api";
+import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 import { Turnstile } from "../components/Turnstile";
 import { generateFingerprint } from "../lib/fingerprint";
 import { parseLlamaCppCommand } from "../lib/commandParser";
+import { Layout, Breadcrumbs, PageHeader, Section } from "../components/layout";
+import { Button } from "../components/display";
+import { Input, Textarea, CopyButton } from "../components/forms";
+import { Check, ChevronRight, Loader2, Search, ExternalLink } from "../components/icons";
 
-type FormField = {
+const REQUIRED_FIELDS = ["title", "runtime", "modelSlug"] as const;
+
+const QUICK_FIELDS: Array<{
   name: keyof SubmissionInput;
   label: string;
-  type: "text" | "number" | "textarea";
+  type: "text" | "number";
   placeholder?: string;
-  step?: number;
-  min?: number;
-  max?: number;
-};
+}> = [
+  { name: "gpu", label: "GPU", type: "text", placeholder: "e.g., RTX 4090" },
+  { name: "tokensPerSecond", label: "Tokens/sec", type: "number" },
+  { name: "quantization", label: "Quant", type: "text", placeholder: "e.g., Q4_K_M" },
+];
 
-const formSections: { title: string; fields: FormField[] }[] = [
-  {
-    title: "Basic Info",
-    fields: [
-      { name: "title", label: "Title", type: "text", placeholder: "My benchmark result" },
-      {
-        name: "description",
-        label: "Description",
-        type: "textarea",
-        placeholder: "Optional notes",
-      },
-    ],
-  },
+const ADVANCED_SECTIONS: Array<{
+  title: string;
+  fields: Array<{
+    name: keyof SubmissionInput;
+    label: string;
+    type: "text" | "number";
+    placeholder?: string;
+    step?: number;
+    min?: number;
+    max?: number;
+  }>;
+}> = [
   {
     title: "Hardware",
     fields: [
-      { name: "cpu", label: "CPU", type: "text", placeholder: "AMD Ryzen 9 5950X" },
-      { name: "gpu", label: "GPU", type: "text", placeholder: "NVIDIA RTX 4090" },
+      { name: "cpu", label: "CPU", type: "text", placeholder: "e.g., Ryzen 9 5950X" },
       { name: "ramGb", label: "RAM (GB)", type: "number", min: 1 },
+      { name: "vramGb", label: "VRAM (GB)", type: "number", min: 1 },
     ],
   },
   {
@@ -46,11 +53,10 @@ const formSections: { title: string; fields: FormField[] }[] = [
     ],
   },
   {
-    title: "Model",
+    title: "Model Details",
     fields: [
-      { name: "modelName", label: "Model Name", type: "text", placeholder: "Llama-3-8B" },
-      { name: "quantization", label: "Quantization", type: "text", placeholder: "Q4_K_M" },
       { name: "contextLength", label: "Context Length", type: "number", min: 1 },
+      { name: "quantSource", label: "Quant Source", type: "text", placeholder: "e.g., bartowski" },
     ],
   },
   {
@@ -62,7 +68,7 @@ const formSections: { title: string; fields: FormField[] }[] = [
     ],
   },
   {
-    title: "Sampling Parameters",
+    title: "Sampling",
     fields: [
       { name: "temperature", label: "Temperature", type: "number", min: 0, max: 2, step: 0.01 },
       { name: "topP", label: "Top P", type: "number", min: 0, max: 1, step: 0.01 },
@@ -82,43 +88,67 @@ const formSections: { title: string; fields: FormField[] }[] = [
       { name: "seed", label: "Seed", type: "number" },
     ],
   },
-  {
-    title: "Command",
-    fields: [
-      {
-        name: "command",
-        label: "Command",
-        type: "textarea",
-        placeholder: "./llama-cli -m model.gguf ...",
-      },
-    ],
-  },
 ];
 
 export default function SubmitPage() {
-  const location = useLocation();
   const [formData, setFormData] = createSignal<Partial<SubmissionInput>>({});
   const [turnstileToken, setTurnstileToken] = createSignal<string>("");
   const [errors, setErrors] = createSignal<Record<string, string>>({});
   const [submitting, setSubmitting] = createSignal(false);
   const [success, setSuccess] = createSignal<{ id: number; editToken: string } | null>(null);
-  const [copied, setCopied] = createSignal(false);
-  const [parseFeedback, setParseFeedback] = createSignal(false);
+  const [showAdvanced, setShowAdvanced] = createSignal(false);
+  const [parsed, setParsed] = createSignal(false);
 
-  const prefilledFields = (): Partial<SubmissionInput> => {
-    const params = new URLSearchParams(location.search);
-    const ram = params.get("ram");
-    return {
-      cpu: params.get("cpu") ?? undefined,
-      gpu: params.get("gpu") ?? undefined,
-      ramGb: ram ? Number(ram) || undefined : undefined,
-    };
+  const [modelSearch, setModelSearch] = createSignal("");
+  const [modelResults, setModelResults] = createSignal<HFModelResult[]>([]);
+  const [searching, setSearching] = createSignal(false);
+  const [selectedModel, setSelectedModel] = createSignal<HFModelResult | null>(null);
+
+  const stats = useResourceWithDefault(() => api.getStats(), DEFAULT_STATS);
+
+  const searchModels = async (query: string) => {
+    if (query.length < 2) {
+      setModelResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await api.searchModels(query);
+      setModelResults(results);
+    } catch {
+      setModelResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  createEffect(() => {
+    const query = modelSearch();
+    if (query && !selectedModel()) {
+      const timeout = setTimeout(() => searchModels(query), 300);
+      return () => clearTimeout(timeout);
+    }
+  });
+
+  const selectModel = (model: HFModelResult) => {
+    setSelectedModel(model);
+    setFormData((prev) => ({ ...prev, modelSlug: model.id }));
+    setModelSearch("");
+    setModelResults([]);
+  };
+
+  const clearModel = () => {
+    setSelectedModel(null);
+    setFormData((prev) => {
+      const { modelSlug: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   const currentOrigin = () => (typeof window === "undefined" ? "" : window.location.origin);
 
   const getFieldValue = (name: keyof SubmissionInput): string => {
-    const value = formData()[name] ?? prefilledFields()[name];
+    const value = formData()[name];
     return value !== undefined ? String(value) : "";
   };
 
@@ -131,20 +161,35 @@ export default function SubmitPage() {
     });
   };
 
+  const handleCommandPaste = (e: ClipboardEvent) => {
+    const text = e.clipboardData?.getData("text");
+    if (!text || !text.includes("llama")) return;
+
+    const parsedData = parseLlamaCppCommand(text);
+    setFormData((prev) => ({
+      ...prev,
+      ...parsedData,
+      command: prev.command || text,
+      title: prev.title || parsedData.title,
+      description: prev.description || parsedData.description,
+    }));
+    setParsed(true);
+    setTimeout(() => setParsed(false), 2000);
+  };
+
   const parseCommand = () => {
     const command = formData().command;
     if (!command) return;
 
-    const parsed = parseLlamaCppCommand(command);
+    const parsedData = parseLlamaCppCommand(command);
     setFormData((prev) => ({
       ...prev,
-      ...parsed,
-      title: prev.title || parsed.title,
-      description: prev.description || parsed.description,
+      ...parsedData,
+      title: prev.title || parsedData.title,
+      description: prev.description || parsedData.description,
     }));
-
-    setParseFeedback(true);
-    setTimeout(() => setParseFeedback(false), 1500);
+    setParsed(true);
+    setTimeout(() => setParsed(false), 2000);
   };
 
   const handleSubmit = async (e: Event) => {
@@ -179,100 +224,278 @@ export default function SubmitPage() {
     }
   };
 
-  const copyAdminLink = async () => {
-    if (!success()) return;
-    const url = `${currentOrigin()}/submissions/${success()!.id}/admin/${success()!.editToken}`;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const adminUrl = () =>
+    success()
+      ? `${currentOrigin()}/submissions/${success()!.id}/admin/${success()!.editToken}`
+      : "";
+
+  const hasError = (name: string) => !!errors()[name];
+  const getError = (name: string) => errors()[name];
+
+  const footerStats = () => {
+    if (stats.loading || !stats()) return undefined;
+    return {
+      totalSubmissions: stats()!.totalSubmissions,
+      uniqueModels: stats()!.uniqueModels,
+      uniqueGpus: stats()!.uniqueGpus,
+    };
   };
 
   return (
-    <main class="ll-page max-w-2xl">
-      <Title>Submit Benchmark - ShareLlama</Title>
+    <Layout stats={footerStats()}>
+      <Title>Submit Configuration - ShareLlama</Title>
 
-      <nav class="mb-8 flex items-center gap-2 text-sm">
-        <a href="/" class="ll-nav-link">
-          Home
-        </a>
-        <span class="text-[color:var(--text-dim)]">/</span>
-        <a href="/submissions" class="ll-nav-link">
-          Submissions
-        </a>
-        <span class="text-[color:var(--text-dim)]">/</span>
-        <span class="font-medium text-[color:var(--text)]">Submit</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Submit" }]} />
 
       <Show when={success()}>
-        <div class="ll-card border-[color:var(--accent)] bg-[color:var(--accent-muted)] p-6 fade-in-up">
-          <div class="mb-4 flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--accent)]">
-              <svg
-                class="h-5 w-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+        <div class="submit-success fade-in-up">
+          <div class="submit-success-header">
+            <div class="submit-success-icon">
+              <Check size={20} />
             </div>
             <div>
-              <h2 class="text-display text-lg font-semibold text-[color:var(--accent-text)]">
-                Submission Successful!
-              </h2>
-              <p class="text-sm text-[color:var(--text-muted)]">
-                Your benchmark has been submitted.
-              </p>
+              <h2 class="submit-success-title">Submission Successful!</h2>
+              <p class="submit-success-text">Your configuration has been submitted.</p>
             </div>
           </div>
 
-          <div class="ll-card mb-4 p-4">
-            <p class="mb-2 text-sm font-medium">
-              Admin Link (save this to edit/delete your submission):
-            </p>
-            <code class="text-mono block break-all text-xs text-[color:var(--text-muted)]">
-              {currentOrigin()}/submissions/{success()!.id}/admin/{success()!.editToken}
-            </code>
+          <div class="submit-admin-box">
+            <p class="submit-admin-label">Admin Link (save this to edit/delete):</p>
+            <code class="submit-admin-url">{adminUrl()}</code>
           </div>
 
-          <div class="flex gap-3">
-            <button type="button" onClick={copyAdminLink} class="ll-btn ll-btn-primary">
-              {copied() ? "Copied!" : "Copy Admin Link"}
-            </button>
-            <A href={`/submissions/${success()!.id}`} class="ll-btn ll-btn-secondary">
-              View Submission
+          <div class="submit-actions">
+            <CopyButton text={adminUrl()} label="Copy Admin Link" />
+            <A href={`/submissions/${success()!.id}`}>
+              <Button type="button" variant="secondary">
+                View Configuration
+              </Button>
             </A>
           </div>
         </div>
       </Show>
 
       <Show when={!success()}>
-        <header class="mb-8">
-          <h1 class="text-display text-2xl font-bold">Submit Benchmark</h1>
-          <p class="mt-1 text-sm text-[color:var(--text-muted)]">
-            Share your llama.cpp configuration and performance results with the community.
-          </p>
-        </header>
+        <PageHeader
+          title="Submit Configuration"
+          description="Share your model configuration and performance results."
+        />
 
-        <form onSubmit={handleSubmit} class="space-y-8">
-          <For each={formSections}>
-            {(section) => (
-              <section>
-                <h2 class="text-display mb-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
-                  {section.title}
-                </h2>
-                <div class="grid gap-4 sm:grid-cols-2">
-                  <For each={section.fields}>
-                    {(field) => (
-                      <div class={field.type === "textarea" ? "sm:col-span-2" : ""}>
-                        <label for={field.name} class="mb-1.5 block text-sm font-medium">
-                          {field.label}
-                        </label>
-                        <Show
-                          when={field.type === "textarea"}
-                          fallback={
-                            <input
+        <form onSubmit={handleSubmit}>
+          <Section card title="Model Selection">
+            <Show when={!selectedModel()}>
+              <div class="submit-field submit-field--full">
+                <label class="submit-label">Search HuggingFace Models *</label>
+                <div class="model-search">
+                  <Search size={18} class="model-search-icon" />
+                  <input
+                    type="text"
+                    class="input model-search-input"
+                    placeholder="Search models (e.g., Llama-3, Qwen, Mistral)..."
+                    value={modelSearch()}
+                    onInput={(e) => setModelSearch(e.currentTarget.value)}
+                  />
+                  <Show when={searching()}>
+                    <Loader2 size={16} class="model-search-loading icon--spin" />
+                  </Show>
+                </div>
+                <Show when={hasError("modelSlug")}>
+                  <p class="submit-error">{getError("modelSlug")}</p>
+                </Show>
+              </div>
+
+              <Show when={modelResults().length > 0}>
+                <div class="model-results">
+                  <For each={modelResults().slice(0, 8)}>
+                    {(model) => (
+                      <button
+                        type="button"
+                        class="model-result-item"
+                        onClick={() => selectModel(model)}
+                      >
+                        <div class="model-result-name">{model.id}</div>
+                        <div class="model-result-meta">
+                          <span>{model.pipeline_tag || "unknown"}</span>
+                          <span>{(model.downloads / 1000).toFixed(0)}K downloads</span>
+                        </div>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </Show>
+
+            <Show when={selectedModel()}>
+              <div class="model-selected">
+                <div class="model-selected-info">
+                  <div class="model-selected-name">{selectedModel()!.id}</div>
+                  <div class="model-selected-meta">
+                    by {selectedModel()!.author} · {(selectedModel()!.downloads / 1000).toFixed(0)}K
+                    downloads
+                  </div>
+                </div>
+                <a
+                  href={`https://huggingface.co/${selectedModel()!.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn btn--ghost btn--sm"
+                >
+                  <ExternalLink size={14} />
+                  View on HF
+                </a>
+                <button type="button" class="btn btn--ghost btn--sm" onClick={clearModel}>
+                  Change
+                </button>
+              </div>
+            </Show>
+          </Section>
+
+          <Section card title="Quantization">
+            <div class="submit-grid submit-grid--2col">
+              <div class="submit-field">
+                <label for="quantization" class="submit-label">
+                  Quantization
+                </label>
+                <Input
+                  id="quantization"
+                  type="text"
+                  placeholder="e.g., Q4_K_M"
+                  value={getFieldValue("quantization")}
+                  onInput={(e) => updateField("quantization", e.currentTarget.value || undefined)}
+                />
+              </div>
+              <div class="submit-field">
+                <label for="quantSource" class="submit-label">
+                  Source
+                </label>
+                <Input
+                  id="quantSource"
+                  type="text"
+                  placeholder="e.g., bartowski, unsloth"
+                  value={getFieldValue("quantSource")}
+                  onInput={(e) => updateField("quantSource", e.currentTarget.value || undefined)}
+                />
+              </div>
+            </div>
+            <Show when={selectedModel()}>
+              <p class="submit-hint">
+                Find quantizations on{" "}
+                <a
+                  href={`https://huggingface.co/models?search=${selectedModel()!.id.split("/")[1]} GGUF`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="link"
+                >
+                  HuggingFace
+                </a>
+              </p>
+            </Show>
+          </Section>
+
+          <Section card title="Command">
+            <div class="submit-field submit-field--full">
+              <Textarea
+                id="command"
+                placeholder="Paste your llama.cpp command here..."
+                value={getFieldValue("command")}
+                onInput={(e) => updateField("command", e.currentTarget.value || undefined)}
+                onPaste={handleCommandPaste}
+                rows={4}
+                class="command-input"
+              />
+              <Show when={parsed()}>
+                <div class="parsed-feedback fade-in">
+                  <Check size={14} />
+                  Command parsed - fields auto-filled
+                </div>
+              </Show>
+              <Show when={!parsed()}>
+                <p class="submit-parse-hint">
+                  Paste a llama.cpp command to auto-fill form fields, or{" "}
+                  <button type="button" onClick={parseCommand} class="link">
+                    parse manually
+                  </button>
+                </p>
+              </Show>
+            </div>
+          </Section>
+
+          <Section card title="Quick Info">
+            <div class="submit-grid submit-grid--2col">
+              <div class="submit-field submit-field--full">
+                <label for="title" class="submit-label">
+                  Title *
+                </label>
+                <Input
+                  id="title"
+                  type="text"
+                  placeholder="e.g., RTX 4090 with Q4_K_M"
+                  value={getFieldValue("title")}
+                  onInput={(e) => updateField("title", e.currentTarget.value || undefined)}
+                  error={hasError("title")}
+                />
+                <Show when={getError("title")}>
+                  <p class="submit-error">{getError("title")}</p>
+                </Show>
+              </div>
+              <For each={QUICK_FIELDS}>
+                {(field) => (
+                  <div class="submit-field">
+                    <label for={field.name} class="submit-label">
+                      {field.label}
+                    </label>
+                    <Input
+                      id={field.name}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={getFieldValue(field.name)}
+                      onInput={(e) =>
+                        updateField(
+                          field.name,
+                          field.type === "number"
+                            ? e.currentTarget.value
+                              ? Number(e.currentTarget.value)
+                              : undefined
+                            : e.currentTarget.value || undefined,
+                        )
+                      }
+                      error={hasError(field.name)}
+                    />
+                    <Show when={getError(field.name)}>
+                      <p class="submit-error">{getError(field.name)}</p>
+                    </Show>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Section>
+
+          <Section card>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              class={`advanced-toggle ${showAdvanced() ? "advanced-toggle--open" : ""}`}
+            >
+              <ChevronRight size={14} class="advanced-toggle-icon" />
+              {showAdvanced() ? "Hide" : "Show"} all options
+            </button>
+
+            <div class={`advanced-content ${showAdvanced() ? "advanced-content--open" : ""}`}>
+              <For each={ADVANCED_SECTIONS}>
+                {(section) => (
+                  <div class="submit-section">
+                    <h3 class="submit-section-title">{section.title}</h3>
+                    <div class="submit-grid submit-grid--2col">
+                      <For each={section.fields}>
+                        {(field) => (
+                          <div class="submit-field">
+                            <label for={field.name} class="submit-label">
+                              {field.label}
+                              {REQUIRED_FIELDS.includes(
+                                field.name as (typeof REQUIRED_FIELDS)[number],
+                              ) && " *"}
+                            </label>
+                            <Input
                               id={field.name}
                               type={field.type}
                               placeholder={field.placeholder}
@@ -290,109 +513,55 @@ export default function SubmitPage() {
                                     : e.currentTarget.value || undefined,
                                 )
                               }
-                              class="ll-input"
-                              classList={{ "border-red-500": !!errors()[field.name] }}
+                              error={hasError(field.name)}
                             />
-                          }
-                        >
-                          <textarea
-                            id={field.name}
-                            placeholder={field.placeholder}
-                            value={getFieldValue(field.name)}
-                            onInput={(e) =>
-                              updateField(field.name, e.currentTarget.value || undefined)
-                            }
-                            rows={3}
-                            class="ll-textarea"
-                            classList={{ "border-red-500": !!errors()[field.name] }}
-                          />
-                          <Show when={field.name === "command"}>
-                            <div class="mt-2">
-                              <button
-                                type="button"
-                                onClick={parseCommand}
-                                class={`ll-btn ll-btn-sm ${
-                                  parseFeedback()
-                                    ? "ll-btn-primary glow-pulse-once"
-                                    : "ll-btn-secondary"
-                                }`}
-                              >
-                                <Show when={parseFeedback()} fallback={<>Parse Command</>}>
-                                  <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                  >
-                                    <path
-                                      stroke-linecap="round"
-                                      stroke-linejoin="round"
-                                      d="M5 13l4 4L19 7"
-                                    />
-                                  </svg>
-                                  Parsed
-                                </Show>
-                              </button>
-                              <p class="mt-1 text-xs text-[color:var(--text-dim)]">
-                                Auto-fill form from your llama.cpp command
-                              </p>
-                            </div>
-                          </Show>
-                        </Show>
-                        <Show when={errors()[field.name]}>
-                          <p class="mt-1 text-xs text-red-400">{errors()[field.name]}</p>
-                        </Show>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </section>
-            )}
-          </For>
+                            <Show when={getError(field.name)}>
+                              <p class="submit-error">{getError(field.name)}</p>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                )}
+              </For>
 
-          <section class="ll-card p-4">
-            <h2 class="text-display mb-3 text-sm font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
-              Verification
-            </h2>
+              <div class="submit-section">
+                <h3 class="submit-section-title">Description</h3>
+                <div class="submit-field submit-field--full">
+                  <Textarea
+                    id="description"
+                    placeholder="Optional notes about this configuration..."
+                    value={getFieldValue("description")}
+                    onInput={(e) => updateField("description", e.currentTarget.value || undefined)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          <Section card title="Verification">
             <Turnstile onVerify={setTurnstileToken} />
             <Show when={errors().turnstile}>
-              <p class="mt-2 text-xs text-red-400">{errors().turnstile}</p>
+              <p class="submit-error">{errors().turnstile}</p>
             </Show>
-          </section>
+          </Section>
 
           <Show when={errors().submit}>
-            <div class="ll-card border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
-              {errors().submit}
+            <div class="card submit-error-box">
+              <p class="submit-error">{errors().submit}</p>
             </div>
           </Show>
 
-          <button
-            type="submit"
-            disabled={submitting()}
-            class="ll-btn ll-btn-primary ll-btn-lg w-full press"
-          >
-            <Show when={submitting()} fallback={<>Submit Benchmark</>}>
-              <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
+          <Button type="submit" disabled={submitting()} variant="primary" size="lg" block>
+            <Show when={submitting()} fallback="Submit Configuration">
+              <Loader2 size={16} class="icon--spin" />
               Submitting...
             </Show>
-          </button>
+          </Button>
         </form>
       </Show>
-    </main>
+    </Layout>
   );
 }

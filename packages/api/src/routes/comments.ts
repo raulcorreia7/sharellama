@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, desc, and, sql } from "drizzle-orm";
 import type { Env } from "../env";
+import { getConfig } from "../env";
 import { getDb } from "../lib/db";
 import { comments, commentVotes, submissions } from "@sharellama/database";
 import {
@@ -75,7 +76,7 @@ submissionCommentsRoutes.get(
   "/:id/comments",
   zValidator("query", listCommentsQuerySchema),
   async (c) => {
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(getConfig(c.env).db.url);
     const submissionId = parseInt(c.req.param("id"), 10);
 
     if (isNaN(submissionId)) {
@@ -117,7 +118,7 @@ submissionCommentsRoutes.post(
   verifyTurnstile(),
   zValidator("json", createCommentSchema),
   async (c) => {
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(getConfig(c.env).db.url);
     const submissionId = parseInt(c.req.param("id"), 10);
 
     if (isNaN(submissionId)) {
@@ -180,7 +181,7 @@ commentsRoutes.post(
   rateLimitVote,
   zValidator("json", voteCommentSchema),
   async (c) => {
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(getConfig(c.env).db.url);
     const commentId = parseInt(c.req.param("id"), 10);
 
     if (isNaN(commentId)) {
@@ -247,7 +248,7 @@ commentsRoutes.post(
 );
 
 commentsRoutes.delete("/:id", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const commentId = parseInt(c.req.param("id"), 10);
 
   if (isNaN(commentId)) {

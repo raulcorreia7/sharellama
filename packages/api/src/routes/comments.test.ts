@@ -2,13 +2,21 @@ import { describe, it, expect } from "vitest";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, and, desc, sql as drizzleSql } from "drizzle-orm";
-import { createTestDb, createMockEnv, submissions, comments, commentVotes } from "../test/db";
+import {
+  createTestDb,
+  createMockEnv,
+  submissions,
+  comments,
+  commentVotes,
+  models,
+} from "../test/db";
 import {
   createCommentSchema,
   listCommentsQuerySchema,
   voteCommentSchema,
   type CommentNode,
 } from "@sharellama/model/schemas/comment";
+import { createTestModel, createTestSubmission } from "../test/fixtures";
 
 type Env = ReturnType<typeof createMockEnv>;
 
@@ -239,20 +247,21 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const res = await app.request(
-        `/submissions/${sub.id}/comments`,
+        `/submissions/${sub!.id}/comments`,
         {
           method: "POST",
           headers: {
@@ -265,7 +274,7 @@ describe("Comments API", () => {
       );
 
       expect(res.status).toBe(201);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode };
       expect(body.data.body).toBe("Great post!");
       expect(body.data.parentId).toBe(null);
       expect(body.data.authorHash).toHaveLength(4);
@@ -275,61 +284,63 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const authorHash = await hashFingerprint("commenter-1");
       const [parent] = await db
         .insert(comments)
-        .values({ submissionId: sub.id, authorHash, body: "Parent comment" })
+        .values({ submissionId: sub!.id, authorHash, body: "Parent comment" })
         .returning();
 
       const res = await app.request(
-        `/submissions/${sub.id}/comments`,
+        `/submissions/${sub!.id}/comments`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Fingerprint": "commenter-2",
           },
-          body: JSON.stringify({ body: "Reply!", parentId: parent.id }),
+          body: JSON.stringify({ body: "Reply!", parentId: parent!.id }),
         },
         env,
       );
 
       expect(res.status).toBe(201);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode };
       expect(body.data.body).toBe("Reply!");
-      expect(body.data.parentId).toBe(parent.id);
+      expect(body.data.parentId).toBe(parent!.id);
     });
 
     it("requires fingerprint", async () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const res = await app.request(
-        `/submissions/${sub.id}/comments`,
+        `/submissions/${sub!.id}/comments`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -345,20 +356,21 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const res = await app.request(
-        `/submissions/${sub.id}/comments`,
+        `/submissions/${sub!.id}/comments`,
         {
           method: "POST",
           headers: {
@@ -397,20 +409,21 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const res = await app.request(
-        `/submissions/${sub.id}/comments`,
+        `/submissions/${sub!.id}/comments`,
         {
           method: "POST",
           headers: {
@@ -431,27 +444,28 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       await db.insert(comments).values([
-        { submissionId: sub.id, authorHash: "a1", body: "Comment 1" },
-        { submissionId: sub.id, authorHash: "a2", body: "Comment 2" },
+        { submissionId: sub!.id, authorHash: "a1", body: "Comment 1" },
+        { submissionId: sub!.id, authorHash: "a2", body: "Comment 2" },
       ]);
 
-      const res = await app.request(`/submissions/${sub.id}/comments?include=flat`, {}, env);
+      const res = await app.request(`/submissions/${sub!.id}/comments?include=flat`, {}, env);
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode[] };
       expect(body.data.length).toBe(2);
     });
 
@@ -459,34 +473,35 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const [parent] = await db
         .insert(comments)
-        .values({ submissionId: sub.id, authorHash: "a1", body: "Parent" })
+        .values({ submissionId: sub!.id, authorHash: "a1", body: "Parent" })
         .returning();
 
       await db.insert(comments).values([
-        { submissionId: sub.id, authorHash: "a2", body: "Reply 1", parentId: parent.id },
-        { submissionId: sub.id, authorHash: "a3", body: "Reply 2", parentId: parent.id },
+        { submissionId: sub!.id, authorHash: "a2", body: "Reply 1", parentId: parent!.id },
+        { submissionId: sub!.id, authorHash: "a3", body: "Reply 2", parentId: parent!.id },
       ]);
 
-      const res = await app.request(`/submissions/${sub.id}/comments?include=all`, {}, env);
+      const res = await app.request(`/submissions/${sub!.id}/comments?include=all`, {}, env);
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode[] };
       expect(body.data.length).toBe(1);
-      expect(body.data[0].replies.length).toBe(2);
+      expect(body.data[0]!.replies!.length).toBe(2);
     });
 
     it("returns 404 for non-existent submission", async () => {
@@ -503,25 +518,26 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const [comment] = await db
         .insert(comments)
-        .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
+        .values({ submissionId: sub!.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
       const res = await app.request(
-        `/comments/${comment.id}/vote`,
+        `/comments/${comment!.id}/vote`,
         {
           method: "POST",
           headers: {
@@ -534,7 +550,7 @@ describe("Comments API", () => {
       );
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode };
       expect(body.data.score).toBe(1);
     });
 
@@ -542,25 +558,26 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const [comment] = await db
         .insert(comments)
-        .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
+        .values({ submissionId: sub!.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
       await app.request(
-        `/comments/${comment.id}/vote`,
+        `/comments/${comment!.id}/vote`,
         {
           method: "POST",
           headers: {
@@ -573,7 +590,7 @@ describe("Comments API", () => {
       );
 
       const res = await app.request(
-        `/comments/${comment.id}/vote`,
+        `/comments/${comment!.id}/vote`,
         {
           method: "POST",
           headers: {
@@ -586,7 +603,7 @@ describe("Comments API", () => {
       );
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode };
       expect(body.data.score).toBe(0);
     });
 
@@ -594,25 +611,26 @@ describe("Comments API", () => {
       const { app, db } = await createCommentsApp();
       const env = createMockEnv();
 
+      await db.insert(models).values(createTestModel());
+
       const [sub] = await db
         .insert(submissions)
         .values({
+          ...createTestSubmission(),
           title: "Test",
           runtime: "r",
-          modelName: "m",
           authorHash: "a",
           editToken: "t",
-          updatedAt: new Date(),
         })
         .returning();
 
       const [comment] = await db
         .insert(comments)
-        .values({ submissionId: sub.id, authorHash: "a1", body: "Comment", score: 0 })
+        .values({ submissionId: sub!.id, authorHash: "a1", body: "Comment", score: 0 })
         .returning();
 
       await app.request(
-        `/comments/${comment.id}/vote`,
+        `/comments/${comment!.id}/vote`,
         {
           method: "POST",
           headers: {
@@ -625,7 +643,7 @@ describe("Comments API", () => {
       );
 
       const res = await app.request(
-        `/comments/${comment.id}/vote`,
+        `/comments/${comment!.id}/vote`,
         {
           method: "POST",
           headers: {
@@ -638,7 +656,7 @@ describe("Comments API", () => {
       );
 
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = (await res.json()) as { data: CommentNode };
       expect(body.data.score).toBe(-1);
     });
 

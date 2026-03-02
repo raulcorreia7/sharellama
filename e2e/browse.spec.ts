@@ -1,118 +1,106 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Browse Page", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route("**/api/submissions*", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [
-            {
-              id: 1,
-              title: "Llama 3 8B on RTX 4090",
-              runtime: "llama.cpp",
-              modelName: "llama-3-8b",
-              gpu: "RTX 4090",
-              tokensPerSecond: 85.5,
-              score: 42,
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 2,
-              title: "Mistral 7B on CPU",
-              runtime: "llama.cpp",
-              modelName: "mistral-7b",
-              cpu: "Ryzen 9 7950X",
-              tokensPerSecond: 12.3,
-              score: 15,
-              createdAt: new Date().toISOString(),
-            },
-          ],
-          pagination: {
-            page: 1,
-            limit: 20,
-            total: 2,
-            totalPages: 1,
-          },
-        }),
-      });
-    });
-  });
-
-  test("displays submissions list", async ({ page }) => {
+test.describe("Homepage", () => {
+  test("loads and shows hero section", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("Llama 3 8B on RTX 4090")).toBeVisible();
-    await expect(page.getByText("Mistral 7B on CPU")).toBeVisible();
+    await expect(page.locator(".hero")).toBeVisible();
+    await expect(page.locator(".hero-title")).toBeVisible();
+    await expect(page.locator(".hero .text-gradient").getByText("ShareLlama")).toBeVisible();
+    await expect(
+      page.getByText("Share and discover optimal llama.cpp configurations"),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /browse configurations/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /submit your config/i }).first()).toBeVisible();
   });
 
-  test("displays submission details", async ({ page }) => {
+  test("shows recent configurations section", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("RTX 4090")).toBeVisible();
-    await expect(page.getByText("85.5")).toBeVisible();
-    await expect(page.getByText("42")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /recent configurations/i })).toBeVisible();
   });
 
-  test("navigates to submission detail on click", async ({ page }) => {
-    await page.route("**/api/submissions/1", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: {
-            id: 1,
-            title: "Llama 3 8B on RTX 4090",
-            runtime: "llama.cpp",
-            modelName: "llama-3-8b",
-            gpu: "RTX 4090",
-            tokensPerSecond: 85.5,
-            score: 42,
-            description: "Detailed benchmark results",
-            createdAt: new Date().toISOString(),
-          },
-        }),
-      });
-    });
-
+  test("shows top rated section", async ({ page }) => {
     await page.goto("/");
-    await page.getByText("Llama 3 8B on RTX 4090").click();
 
-    await expect(page).toHaveURL(/\/submissions\/1/);
+    await expect(page.getByRole("heading", { name: /top rated/i })).toBeVisible();
   });
 
-  test("filters by search query", async ({ page }) => {
+  test("shows popular models section", async ({ page }) => {
     await page.goto("/");
 
-    const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.isVisible()) {
-      await searchInput.fill("RTX");
-      await page.keyboard.press("Enter");
-
-      await expect(page.getByText("Llama 3 8B on RTX 4090")).toBeVisible();
-    }
+    await expect(page.getByRole("heading", { name: /popular models/i })).toBeVisible();
   });
 
-  test("shows empty state when no submissions", async ({ page }) => {
-    await page.route("**/api/submissions*", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [],
-          pagination: {
-            page: 1,
-            limit: 20,
-            total: 0,
-            totalPages: 0,
-          },
-        }),
-      });
-    });
-
+  test("shows CTA banner", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText(/no submissions/i)).toBeVisible();
+    await expect(page.getByText(/have a configuration to share/i)).toBeVisible();
+  });
+
+  test("navigates to submit page", async ({ page }) => {
+    await page.goto("/");
+
+    await page
+      .getByRole("link", { name: /submit your config/i })
+      .first()
+      .click();
+
+    await expect(page).toHaveURL("/submit");
+  });
+
+  test("navigates to browse page", async ({ page }) => {
+    await page.goto("/");
+
+    await page
+      .getByRole("link", { name: /browse configurations/i })
+      .first()
+      .click();
+
+    await expect(page).toHaveURL("/submissions");
+  });
+});
+
+test.describe("Browse Submissions Page", () => {
+  test("displays browse submissions page", async ({ page }) => {
+    await page.goto("/submissions");
+
+    await expect(page.getByRole("heading", { name: "Submissions" })).toBeVisible();
+  });
+
+  test("shows search input", async ({ page }) => {
+    await page.goto("/submissions");
+
+    await expect(page.getByPlaceholder(/search by title/i)).toBeVisible();
+  });
+
+  test("shows submit button", async ({ page }) => {
+    await page.goto("/submissions");
+
+    await expect(page.getByRole("link", { name: /submit/i }).first()).toBeVisible();
+  });
+
+  test("filters by model via URL", async ({ page }) => {
+    await page.goto("/submissions?model=llama-3-8b");
+
+    await expect(page).toHaveURL(/model=llama-3-8b/);
+  });
+
+  test("filters by GPU via URL", async ({ page }) => {
+    await page.goto("/submissions?gpu=RTX%204090");
+
+    await expect(page).toHaveURL(/gpu=/);
+  });
+
+  test("filters by runtime via URL", async ({ page }) => {
+    await page.goto("/submissions?runtime=llama.cpp");
+
+    await expect(page).toHaveURL(/runtime=llama.cpp/);
+  });
+
+  test("searches by query via URL", async ({ page }) => {
+    await page.goto("/submissions?q=test");
+
+    await expect(page).toHaveURL(/q=test/);
   });
 });

@@ -19,7 +19,7 @@ const parseInt_ = (value: string): number | undefined => {
 };
 
 const FLAG_DEFS: FlagDef[] = [
-  { names: ["-m", "--model"], field: "modelName", parse: parseString },
+  { names: ["-m", "--model"], field: "modelSlug", parse: parseString },
   { names: ["-c", "--ctx-size", "--context-length"], field: "contextLength", parse: parseInt_ },
   { names: ["--temp", "--temperature"], field: "temperature", parse: parseNumber },
   { names: ["--top-p"], field: "topP", parse: parseNumber },
@@ -184,9 +184,9 @@ export function parseLlamaCppCommand(command: string): ParsedCommand {
     }
   }
 
-  if (result.modelName) {
-    const baseName = extractModelBasename(result.modelName as string);
-    result.modelName = baseName;
+  if (result.modelSlug) {
+    const baseName = extractModelBasename(result.modelSlug as string);
+    result.modelSlug = baseName;
 
     if (!result.quantization) {
       result.quantization = extractQuantization(baseName);

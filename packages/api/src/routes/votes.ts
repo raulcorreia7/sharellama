@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { eq, and, sql } from "drizzle-orm";
 import type { Env } from "../env";
+import { getConfig } from "../env";
 import { getDb } from "../lib/db";
 import { submissions, votes } from "@sharellama/database";
 import { createVoteSchema, type VoteValue } from "@sharellama/model/schemas/vote";
@@ -18,7 +19,7 @@ async function hashFingerprint(fingerprint: string): Promise<string> {
 }
 
 app.post("/:id/vote", rateLimitVote, zValidator("json", createVoteSchema), async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const submissionId = parseInt(c.req.param("id"), 10);
   const { value } = c.req.valid("json");
 
@@ -107,7 +108,7 @@ app.post("/:id/vote", rateLimitVote, zValidator("json", createVoteSchema), async
 });
 
 app.get("/:id/vote", async (c) => {
-  const db = getDb(c.env.DATABASE_URL);
+  const db = getDb(getConfig(c.env).db.url);
   const submissionId = parseInt(c.req.param("id"), 10);
 
   if (isNaN(submissionId)) {

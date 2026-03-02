@@ -1,10 +1,25 @@
-import type { Submission, SubmissionInput, SubmissionUpdate, ApiError } from "@sharellama/model";
+import type {
+  Submission,
+  SubmissionInput,
+  SubmissionUpdate,
+  HFModelResult,
+} from "@sharellama/model";
+import type { Model } from "@sharellama/model/schemas/model";
 import type { VoteValue, CreateVoteInput } from "@sharellama/model/schemas/vote";
 import type {
   CommentNode,
   CreateCommentInput,
   VoteCommentInput,
 } from "@sharellama/model/schemas/comment";
+import { fetchWithRetry } from "./apiUtils";
+import { getUiConfig } from "./config";
+
+export const DEFAULT_STATS = { totalSubmissions: 0, totalVotes: 0, uniqueGpus: 0, uniqueModels: 0 };
+export const DEFAULT_META: FilterMeta = { models: [], gpus: [], runtimes: [], quantizations: [] };
+export const DEFAULT_SUBMISSIONS: SubmissionsListResponse = {
+  data: [],
+  pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+};
 
 export interface FilterMeta {
   models: Array<{ name: string; count: number }>;
@@ -37,7 +52,16 @@ export interface SubmissionsListResponse {
   };
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
+export interface ModelDetailResponse {
+  data: Model;
+  configurations: Submission[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -48,7 +72,7 @@ class ApiClient {
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const response = await fetch(url, {
+    const result = await fetchWithRetry<T>(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -56,14 +80,33 @@ class ApiClient {
       },
     });
 
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: "Unknown error",
-      }));
-      throw new Error(error.message ?? error.error);
+    if (!result.ok) {
+      throw result.error;
     }
 
-    return response.json();
+    return result.data;
+  }
+
+  private async requestWithDefault<T>(
+    path: string,
+    defaultValue: T,
+    options: RequestInit = {},
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const result = await fetchWithRetry<T>(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+
+    if (!result.ok) {
+      console.error(`API request failed: ${path}`, result.error);
+      return defaultValue;
+    }
+
+    return result.data;
   }
 
   async getSubmissions(filters: SubmissionFilters = {}): Promise<SubmissionsListResponse> {
@@ -89,11 +132,14 @@ class ApiClient {
     }
     if (filters.minTps !== undefined) params.set("minTps", String(filters.minTps));
 
-    return this.request<SubmissionsListResponse>(`/submissions?${params.toString()}`);
+    return this.requestWithDefault<SubmissionsListResponse>(
+      `/submissions?${params.toString()}`,
+      DEFAULT_SUBMISSIONS,
+    );
   }
 
   async getSubmissionsMeta(): Promise<FilterMeta> {
-    return this.request<FilterMeta>("/submissions/meta");
+    return this.requestWithDefault<FilterMeta>("/submissions/meta", DEFAULT_META);
   }
 
   async getStats(): Promise<{
@@ -102,12 +148,12 @@ class ApiClient {
     uniqueGpus: number;
     uniqueModels: number;
   }> {
-    return this.request<{
+    return this.requestWithDefault<{
       totalSubmissions: number;
       totalVotes: number;
       uniqueGpus: number;
       uniqueModels: number;
-    }>("/submissions/stats");
+    }>("/submissions/stats", DEFAULT_STATS);
   }
 
   async getSubmission(id: number): Promise<Submission> {
@@ -213,6 +259,19 @@ class ApiClient {
       },
     });
   }
+
+  async searchModels(query: string): Promise<HFModelResult[]> {
+    const params = new URLSearchParams({ q: query, limit: "10" });
+    const result = await this.requestWithDefault<{ data: HFModelResult[] }>(
+      `/models/search?${params.toString()}`,
+      { data: [] },
+    );
+    return result.data;
+  }
+
+  async getModel(slug: string): Promise<ModelDetailResponse> {
+    return this.request<ModelDetailResponse>(`/models/${encodeURIComponent(slug)}`);
+  }
 }
 
-export const api = new ApiClient(API_URL);
+export const api = new ApiClient(getUiConfig().api.url);

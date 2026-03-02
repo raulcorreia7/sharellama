@@ -1,5 +1,5 @@
 import { onCleanup, onMount } from "solid-js";
-import { TURNSTILE_SITE_KEY } from "../lib/turnstile";
+import { getTurnstileSiteKey } from "../lib/turnstile";
 
 declare global {
   interface Window {
@@ -11,7 +11,7 @@ declare global {
           callback: (token: string) => void;
           theme?: "light" | "dark" | "auto";
           size?: "normal" | "compact";
-        }
+        },
       ) => string;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
@@ -49,8 +49,7 @@ function loadTurnstileScript(): Promise<void> {
     window.onTurnstileLoad = () => resolve();
 
     const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad";
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
@@ -58,10 +57,12 @@ function loadTurnstileScript(): Promise<void> {
 }
 
 export function Turnstile(props: TurnstileProps) {
+  // eslint-disable-next-line no-unassigned-vars
   let containerRef: HTMLDivElement | undefined;
 
   onMount(async () => {
-    if (!TURNSTILE_SITE_KEY) {
+    const siteKey = getTurnstileSiteKey();
+    if (!siteKey) {
       console.warn("Turnstile site key not configured");
       return;
     }
@@ -70,7 +71,7 @@ export function Turnstile(props: TurnstileProps) {
 
     if (containerRef && window.turnstile) {
       widgetId = window.turnstile.render(containerRef, {
-        sitekey: TURNSTILE_SITE_KEY,
+        sitekey: siteKey,
         callback: props.onVerify,
         theme: props.theme ?? "auto",
         size: props.size ?? "normal",
@@ -89,7 +90,7 @@ export function Turnstile(props: TurnstileProps) {
     <div
       ref={containerRef}
       class={props.class ?? "turnstile-container"}
-      data-sitekey={TURNSTILE_SITE_KEY}
+      data-sitekey={getTurnstileSiteKey()}
     />
   );
 }

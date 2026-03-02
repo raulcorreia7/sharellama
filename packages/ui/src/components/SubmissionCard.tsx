@@ -31,7 +31,7 @@ export function SubmissionCard(props: SubmissionCardProps) {
   });
 
   return (
-    <article class="ll-card ll-card-hover ll-card-glow p-4">
+    <article class="card card--hover card--glow p-4">
       <div class="mb-2 flex items-start justify-between gap-2">
         <A
           href={`/submissions/${s().id}`}
@@ -39,13 +39,15 @@ export function SubmissionCard(props: SubmissionCardProps) {
         >
           {s().title}
         </A>
-        <span class="ll-chip shrink-0 text-xs">{s().runtime}</span>
+        <span class="tag shrink-0 text-xs">{s().runtime}</span>
       </div>
 
       <p class="text-muted mb-3 text-sm">
-        <span class="font-medium">{s().modelName}</span>
+        <A href={`/models/${s().modelSlug}`} class="font-medium hover:underline">
+          {s().modelSlug.split("/").pop()}
+        </A>
         {s().quantization && (
-          <span class="ll-chip-neutral ml-2 px-2 py-0.5 text-xs">{s().quantization}</span>
+          <span class="tag--neutral ml-2 px-2 py-0.5 text-xs">{s().quantization}</span>
         )}
       </p>
 
@@ -55,12 +57,12 @@ export function SubmissionCard(props: SubmissionCardProps) {
             {s().tokensPerSecond!.toFixed(1)} tok/s
           </span>
         )}
-        {s().gpu && <span class="ll-chip-neutral text-xs">{s().gpu}</span>}
-        {s().cpu && !s().gpu && <span class="ll-chip-neutral text-xs">{s().cpu}</span>}
+        {s().gpu && <span class="tag--neutral text-xs">{s().gpu}</span>}
+        {s().cpu && !s().gpu && <span class="tag--neutral text-xs">{s().cpu}</span>}
       </div>
 
       <div class="flex items-center justify-between">
-        <Show when={fingerprint()} fallback={<span class="ll-muted">...</span>}>
+        <Show when={fingerprint()} fallback={<span class="text-muted">...</span>}>
           <VoteButtons
             submissionId={s().id}
             initialScore={s().score}

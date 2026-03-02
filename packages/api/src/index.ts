@@ -4,6 +4,8 @@ import { Hono } from "hono";
 import type { Env } from "./env";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
+import huggingfaceRoutes from "./routes/huggingface";
+import modelsRoutes from "./routes/models";
 import submissionsRoutes from "./routes/submissions";
 import votesRoutes from "./routes/votes";
 import { submissionCommentsRoutes, commentsRoutes } from "./routes/comments";
@@ -17,7 +19,7 @@ app.use(
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "X-Turnstile-Token", "X-Fingerprint"],
-  })
+  }),
 );
 
 app.onError((err, c) => {
@@ -27,7 +29,7 @@ app.onError((err, c) => {
       error: "Internal Server Error",
       message: err.message,
     },
-    500
+    500,
   );
 });
 
@@ -52,6 +54,8 @@ app.get("/test/rate-limit", testRateLimit, (c) => {
   return c.json({ count: requestCount });
 });
 
+app.route("/hf", huggingfaceRoutes);
+app.route("/models", modelsRoutes);
 app.route("/submissions", submissionsRoutes);
 app.route("/submissions", votesRoutes);
 app.route("/submissions", submissionCommentsRoutes);

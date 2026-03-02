@@ -1,54 +1,46 @@
 import { Title } from "@solidjs/meta";
-import { createResource, createSignal, Show, Suspense, onMount, type JSX } from "solid-js";
+import { createResource, createSignal, Show, Suspense, onMount, createMemo, For } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { api } from "../../lib/api";
+import { api, DEFAULT_STATS } from "../../lib/api";
+import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
 import { generateFingerprint } from "../../lib/fingerprint";
+import { getUiConfig } from "../../lib/config";
 import { VoteButtons } from "../../components/VoteButtons";
 import { CommentThread } from "../../components/CommentThread";
+import {
+  Layout,
+  Breadcrumbs,
+  PageHeader,
+  Section,
+  EmptyState,
+  LoadingState,
+} from "../../components/layout";
+import { CopyButton } from "../../components/forms";
+import { Button } from "../../components/display/Button";
 
-function CopyButton(props: { text: string }) {
-  const [copied, setCopied] = createSignal(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(props.text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      class={`ll-btn ll-btn-sm ${copied() ? "ll-btn-primary" : "ll-btn-secondary"}`}
-    >
-      <Show when={copied()} fallback="Copy">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-        Copied
-      </Show>
-    </button>
-  );
+interface FieldGroup {
+  title: string;
+  fields: { label: string; value: string | number | null; highlight?: boolean }[];
 }
 
-function Section(props: { title: string; children: JSX.Element }) {
-  return (
-    <section class="ll-card p-4">
-      <h3 class="text-display mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
-        {props.title}
-      </h3>
-      {props.children}
-    </section>
-  );
-}
+function FieldGroup(props: { group: FieldGroup }) {
+  const hasContent = () => props.group.fields.some((f) => f.value !== null);
 
-function Field(props: { label: string; value: string | number | null }) {
   return (
-    <Show when={props.value !== null && props.value !== undefined}>
-      <div class="flex items-center justify-between py-1.5">
-        <span class="text-sm text-[color:var(--text-muted)]">{props.label}</span>
-        <span class="text-mono text-sm font-medium">{props.value}</span>
-      </div>
+    <Show when={hasContent()}>
+      <section class="card section">
+        <h3 class="section-title">{props.group.title}</h3>
+        <For each={props.group.fields.filter((f) => f.value !== null)}>
+          {(field) => (
+            <div class="detail-field">
+              <span class="detail-label">{field.label}</span>
+              <span class={`detail-value ${field.highlight ? "detail-value--highlight" : ""}`}>
+                {field.value}
+              </span>
+            </div>
+          )}
+        </For>
+      </section>
     </Show>
   );
 }
@@ -76,60 +68,143 @@ export default function SubmissionDetail() {
     setFingerprint(fp);
   });
 
-  const [submission] = createResource(id, (i) => api.getSubmission(i));
+  const submissionResource = createResource(id, (i) => api.getSubmission(i));
+  const submission = submissionResource[0];
+  const { refetch } = submissionResource[1];
+
+  const stats = useResourceWithDefault(() => api.getStats(), DEFAULT_STATS);
+
+  const apiCurl = createMemo(() => {
+    const s = submission();
+    if (!s) return "";
+    return `curl "${getUiConfig().api.url}/submissions/${s.id}"`;
+  });
+
+  const fieldGroups = createMemo((): FieldGroup[] => {
+    const s = submission();
+    if (!s) return [];
+
+    return [
+      {
+        title: "Hardware",
+        fields: [
+          { label: "CPU", value: s.cpu },
+          { label: "GPU", value: s.gpu },
+          { label: "RAM", value: s.ramGb ? `${s.ramGb} GB` : null },
+          { label: "VRAM", value: s.vramGb ? `${s.vramGb} GB` : null },
+        ],
+      },
+      {
+        title: "Model",
+        fields: [
+          { label: "Model", value: s.modelSlug },
+          { label: "Quantization", value: s.quantization },
+          { label: "Quant Source", value: s.quantSource },
+          { label: "Context Length", value: s.contextLength },
+        ],
+      },
+      {
+        title: "Performance",
+        fields: [
+          {
+            label: "Tokens/sec",
+            value: s.tokensPerSecond != null ? s.tokensPerSecond!.toFixed(2) : null,
+            highlight: true,
+          },
+          { label: "Latency", value: s.latencyMs ? `${s.latencyMs} ms` : null },
+          { label: "Memory", value: s.memoryMb ? `${s.memoryMb} MB` : null },
+        ],
+      },
+      {
+        title: "Sampling",
+        fields: [
+          { label: "Temperature", value: s.temperature },
+          { label: "Top P", value: s.topP },
+          { label: "Top K", value: s.topK },
+          { label: "Min P", value: s.minP },
+          { label: "Repeat Penalty", value: s.repeatPenalty },
+          { label: "Mirostat", value: s.mirostat },
+          { label: "Mirostat Tau", value: s.mirostatTau },
+          { label: "Mirostat Eta", value: s.mirostatEta },
+          { label: "Seed", value: s.seed },
+        ],
+      },
+    ];
+  });
+
+  const footerStats = () => {
+    if (stats.loading || !stats()) return undefined;
+    return {
+      totalSubmissions: stats()!.totalSubmissions,
+      uniqueModels: stats()!.uniqueModels,
+      uniqueGpus: stats()!.uniqueGpus,
+    };
+  };
 
   return (
-    <main class="ll-page max-w-4xl">
+    <Layout stats={footerStats()}>
       <Title>
         <Suspense>{submission()?.title ?? "Loading..."}</Suspense> - ShareLlama
       </Title>
 
-      <nav class="mb-8 flex items-center gap-2 text-sm">
-        <a href="/" class="ll-nav-link">
-          Home
-        </a>
-        <span class="text-[color:var(--text-dim)]">/</span>
-        <a href="/submissions" class="ll-nav-link">
-          Submissions
-        </a>
-        <span class="text-[color:var(--text-dim)]">/</span>
-        <span class="font-medium text-[color:var(--text)]">Details</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Submissions", href: "/submissions" },
+          { label: "Details" },
+        ]}
+      />
 
       <Show when={submission.loading}>
-        <div class="py-12 text-center text-[color:var(--text-muted)]">Loading...</div>
+        <LoadingState />
       </Show>
 
       <Show when={submission.error}>
-        <div class="ll-card border-red-500/50 bg-red-500/10 p-4 text-red-400">
-          Error: {submission.error?.message}
-        </div>
+        <EmptyState
+          message="Unable to load this submission. It may have been removed or there's a connection issue."
+          action={
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <Button type="button" onClick={() => refetch()} variant="secondary">
+                Try Again
+              </Button>
+              <a href="/submissions">
+                <Button type="button" variant="ghost">
+                  Browse All
+                </Button>
+              </a>
+            </div>
+          }
+        />
       </Show>
 
       <Show when={submission()}>
         {(s) => (
           <>
-            <header class="mb-6">
-              <h1 class="text-display mb-3 text-2xl font-bold sm:text-3xl">{s().title}</h1>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-                <span class="ll-chip">
-                  {s().runtime}
-                  {s().runtimeVersion && ` ${s().runtimeVersion}`}
-                </span>
-                <span class="text-[color:var(--text-muted)]">
-                  Submitted {timeAgo(s().createdAt)}
-                </span>
-                <span class="text-mono font-medium text-[color:var(--accent-text)]">
-                  Score: {s().score}
-                </span>
-              </div>
-            </header>
+            <PageHeader
+              title={s().title}
+              actions={
+                <div style={{ display: "flex", "align-items": "center", gap: "0.75rem" }}>
+                  <span class="tag">
+                    {s().runtime}
+                    {s().runtimeVersion && ` ${s().runtimeVersion}`}
+                  </span>
+                  <span class="text-muted" style={{ "font-size": "0.875rem" }}>
+                    Submitted {timeAgo(s().createdAt)}
+                  </span>
+                  <span class="font-mono" style={{ "font-weight": 500 }}>
+                    Score: {s().score}
+                  </span>
+                </div>
+              }
+            />
 
-            <div class="mb-6">
+            <div style={{ "margin-bottom": "1.5rem" }}>
               <Show
                 when={fingerprint()}
                 fallback={
-                  <div class="text-sm text-[color:var(--text-muted)]">Loading vote controls...</div>
+                  <div class="text-muted" style={{ "font-size": "0.875rem" }}>
+                    Loading vote controls...
+                  </div>
                 }
               >
                 <VoteButtons
@@ -141,75 +216,59 @@ export default function SubmissionDetail() {
             </div>
 
             <Show when={s().description}>
-              <p class="mb-6 text-[color:var(--text)]">{s().description}</p>
+              <p style={{ "margin-bottom": "1.5rem" }}>{s().description}</p>
             </Show>
 
-            <div class="mb-6 grid gap-4 md:grid-cols-2">
-              <Section title="Hardware">
-                <Field label="CPU" value={s().cpu} />
-                <Field label="GPU" value={s().gpu} />
-                <Field label="RAM" value={s().ramGb ? `${s().ramGb} GB` : null} />
-              </Section>
-
-              <Section title="Model">
-                <Field label="Name" value={s().modelName} />
-                <Field label="Quantization" value={s().quantization} />
-                <Field label="Context Length" value={s().contextLength} />
-              </Section>
-
-              <Section title="Runtime">
-                <Field label="Runtime" value={s().runtime} />
-                <Field label="Version" value={s().runtimeVersion} />
-              </Section>
-
-              <Section title="Performance">
-                <Field
-                  label="Tokens/sec"
-                  value={s().tokensPerSecond != null ? `${s().tokensPerSecond!.toFixed(2)}` : null}
-                />
-                <Field label="Latency" value={s().latencyMs ? `${s().latencyMs} ms` : null} />
-                <Field label="Memory" value={s().memoryMb ? `${s().memoryMb} MB` : null} />
-              </Section>
-
-              <Section title="Sampling">
-                <Field label="Temperature" value={s().temperature} />
-                <Field label="Top P" value={s().topP} />
-                <Field label="Top K" value={s().topK} />
-                <Field label="Min P" value={s().minP} />
-                <Field label="Repeat Penalty" value={s().repeatPenalty} />
-                <Field label="Mirostat" value={s().mirostat} />
-                <Field label="Mirostat Tau" value={s().mirostatTau} />
-                <Field label="Mirostat Eta" value={s().mirostatEta} />
-                <Field label="Seed" value={s().seed} />
-              </Section>
-
-              <Show when={s().command}>
-                <Section title="Command">
-                  <div class="flex items-start justify-between gap-3">
-                    <code class="ll-textarea text-mono flex-1 overflow-x-auto text-sm">
-                      {s().command}
-                    </code>
-                    <CopyButton text={s().command!} />
-                  </div>
-                </Section>
-              </Show>
-
-              <Show when={s().tags && s().tags.length > 0}>
-                <Section title="Tags">
-                  <div class="flex flex-wrap gap-2">
-                    {s().tags.map((tag) => (
-                      <span class="ll-chip">{tag}</span>
-                    ))}
-                  </div>
-                </Section>
-              </Show>
+            <div
+              class="stagger-in"
+              style={{
+                display: "grid",
+                gap: "1rem",
+                "grid-template-columns": "repeat(auto-fit, minmax(280px, 1fr))",
+                "margin-bottom": "1.5rem",
+              }}
+            >
+              <For each={fieldGroups()}>{(group) => <FieldGroup group={group} />}</For>
             </div>
+
+            <Show when={s().command}>
+              <Section
+                card
+                title="Command"
+                headerAction={<CopyButton text={s().command!} label="Copy Command" />}
+              >
+                <pre class="section-code">{s().command}</pre>
+              </Section>
+            </Show>
+
+            <Show when={s().tags && s().tags.length > 0}>
+              <Section card title="Tags">
+                <div class="submission-tags">
+                  <For each={s().tags}>{(tag) => <span class="tag">{tag}</span>}</For>
+                </div>
+              </Section>
+            </Show>
+
+            <Section
+              card
+              title="API Access"
+              headerAction={<CopyButton text={apiCurl()} label="Copy curl" />}
+            >
+              <pre class="section-code">{apiCurl()}</pre>
+              <p class="section-hint">
+                Fetch this submission programmatically. See{" "}
+                <a href="/api" class="link">
+                  API docs
+                </a>{" "}
+                for more endpoints.
+              </p>
+            </Section>
 
             <Show
               when={fingerprint()}
               fallback={
-                <section class="mt-8">
-                  <p class="text-[color:var(--text-muted)]">Loading comments...</p>
+                <section style={{ "margin-top": "2rem" }}>
+                  <p class="text-muted">Loading comments...</p>
                 </section>
               }
             >
@@ -218,6 +277,6 @@ export default function SubmissionDetail() {
           </>
         )}
       </Show>
-    </main>
+    </Layout>
   );
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "dev": "wrangler dev",
+    "dev": "node scripts/dev.mjs",
     "deploy": "wrangler deploy",
     "clean": "rm -rf dist .wrangler",
     "test": "vitest run",
@@ -14,17 +14,19 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
+    "@sharellama/core": "workspace:*",
     "@sharellama/database": "workspace:*",
     "@sharellama/model": "workspace:*",
-    "drizzle-orm": "^0.40.0",
-    "hono": "^4.7.4",
-    "zod": "^3.24.2"
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.12.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250214.0",
-    "@types/node": "^22.13.10",
-    "typescript": "^5.8.2",
+    "@cloudflare/workers-types": "^4.20260305.0",
+    "@types/node": "^25.3.3",
+    "dotenv": "^17.3.1",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.18",
-    "wrangler": "^3.114.0"
+    "wrangler": "^4.69.0"
   }
 }

@@ -3,12 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2025-02-14"
 compatibility_flags = ["nodejs_compat"]
 
-[vars]
-ENVIRONMENT = "development"
-DATABASE_URL = "postgres://locallama:locallama@127.0.0.1:5432/locallama"
-BASE_URL = "http://localhost:3000"
-TURNSTILE_SECRET_KEY = "dev-turnstile-secret"
-
 [env.production]
 name = "locallama-api"
 routes = [{ pattern = "api.localllama.io/*", zone_name = "localllama.io" }]

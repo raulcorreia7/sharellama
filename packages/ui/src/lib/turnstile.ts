@@ -1,4 +1,8 @@
-export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
+import { getUiConfig } from "./config";
+
+export function getTurnstileSiteKey(): string {
+  return getUiConfig().auth.turnstileSiteKey;
+}
 
 export async function verifyTurnstileToken(token: string): Promise<boolean> {
   if (!token) {
