@@ -205,8 +205,29 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
 
   const total = Number(countResult[0]?.count ?? 0);
 
+  const CACHE_TTL = 6 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const resultsWithMetadata = await Promise.all(
+    results.map(async (model) => {
+      const cacheKey = `hf_model_${model.slug}`;
+      const cached = await db.select().from(hfCache).where(eq(hfCache.key, cacheKey)).limit(1);
+
+      let hfMetadata = null;
+      if (cached[0] && now - new Date(cached[0].fetchedAt).getTime() < CACHE_TTL) {
+        hfMetadata = cached[0].data as { downloads: number; likes: number };
+      }
+
+      return {
+        ...model,
+        downloads: hfMetadata?.downloads ?? null,
+        likes: hfMetadata?.likes ?? null,
+      };
+    }),
+  );
+
   return c.json({
-    data: results,
+    data: resultsWithMetadata,
     pagination: {
       page,
       limit,

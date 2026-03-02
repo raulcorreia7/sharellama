@@ -101,37 +101,22 @@ export default function ModelDetail() {
             ]}
           />
 
-          <div
-            style={{
-              display: "flex",
-              "align-items": "center",
-              gap: "0.75rem",
-              "margin-bottom": "1rem",
-            }}
-          >
+          <div class="model-detail-header">
             <Show when={model() && model()!.data.orgAvatar}>
               <img
                 src={model()!.data.orgAvatar!}
                 alt={orgName()!}
-                style={{
-                  width: "2.5rem",
-                  height: "2.5rem",
-                  "border-radius": "50%",
-                  "object-fit": "cover",
-                }}
+                class="model-org-avatar"
+                style={{ width: "2rem", height: "2rem" }}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
                 }}
               />
             </Show>
-            <div>
-              <h1 style={{ "font-size": "1.5rem", "font-weight": "700", margin: 0 }}>
-                {modelName()}
-              </h1>
+            <div class="model-title-wrapper">
+              <h1 class="model-detail-title">{modelName()}</h1>
               <Show when={orgName()}>
-                <p class="text-muted" style={{ margin: "0.25rem 0 0", "font-size": "0.875rem" }}>
-                  by {orgName()}
-                </p>
+                <p class="model-detail-org">by {orgName()}</p>
               </Show>
             </div>
           </div>
@@ -205,7 +190,7 @@ export default function ModelDetail() {
               action={
                 <a href="/submit">
                   <button type="button" class="btn btn--primary">
-                    Submit Configuration
+                    Submit
                   </button>
                 </a>
               }

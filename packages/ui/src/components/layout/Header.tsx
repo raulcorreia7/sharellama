@@ -12,6 +12,9 @@ export function Header() {
         </A>
         <div class="header-actions">
           <nav class="header-nav">
+            <A href="/models" class="header-nav-link">
+              Models
+            </A>
             <A href="/submissions" class="header-nav-link">
               Browse
             </A>

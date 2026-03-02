@@ -1,6 +1,6 @@
 import { onCleanup, onMount } from "solid-js";
 
-import { getTurnstileSiteKey } from "../lib/turnstile";
+import { getTurnstileSiteKey } from "../../lib/turnstile";
 
 declare global {
   interface Window {
@@ -21,7 +21,7 @@ declare global {
   }
 }
 
-interface TurnstileProps {
+export interface TurnstileProps {
   onVerify: (token: string) => void;
   theme?: "light" | "dark" | "auto";
   size?: "normal" | "compact";

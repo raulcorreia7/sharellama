@@ -1,7 +1,7 @@
 import { createEffect, createSignal, on, Show } from "solid-js";
 
-import { useDebounce } from "../lib/useDebounce";
-import { Search, X } from "./icons";
+import { useDebounce } from "../../lib/useDebounce";
+import { Search, X } from "../icons";
 import { SearchSuggestions } from "./SearchSuggestions";
 
 interface SearchBarProps {

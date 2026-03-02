@@ -2,8 +2,8 @@ import { createEffect, createSignal, Show } from "solid-js";
 
 import type { VoteValue } from "@sharellama/model/schemas/vote";
 
-import { api } from "../lib/api";
-import { ChevronDown, ChevronUp } from "./icons";
+import { api } from "../../lib/api";
+import { ChevronDown, ChevronUp } from "../icons";
 
 interface VoteButtonsProps {
   submissionId: number;

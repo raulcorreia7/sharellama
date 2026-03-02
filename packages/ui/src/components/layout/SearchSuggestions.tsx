@@ -5,8 +5,8 @@ import {
   formatModelName,
   getTrendingModels,
   type HFModel,
-} from "../lib/huggingface";
-import { Download, ExternalLink, Heart } from "./icons";
+} from "../../lib/huggingface";
+import { Download, ExternalLink, Heart } from "../icons";
 
 interface SearchSuggestionsProps {
   onSelect: (model: string) => void;

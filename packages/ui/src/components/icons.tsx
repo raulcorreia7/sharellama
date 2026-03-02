@@ -1,5 +1,6 @@
 import AlertTriangle from "lucide-solid/icons/alert-triangle";
 import ArrowRight from "lucide-solid/icons/arrow-right";
+import Beaker from "lucide-solid/icons/beaker";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
@@ -27,6 +28,7 @@ import X from "lucide-solid/icons/x";
 export {
   AlertTriangle,
   ArrowRight,
+  Beaker,
   Check,
   ChevronDown,
   ChevronLeft,

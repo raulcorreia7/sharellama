@@ -4,7 +4,7 @@ import { A, useNavigate } from "@solidjs/router";
 
 import { Button } from "../components/display/Button";
 import { HeroMesh } from "../components/HeroMesh";
-import { ArrowRight, ChevronRight, Heart, LayoutGrid, Plus, TrendingUp } from "../components/icons";
+import { ArrowRight, ChevronRight, Heart, LayoutGrid, TrendingUp } from "../components/icons";
 import { Layout } from "../components/layout";
 import { Section } from "../components/layout/Section";
 import { SearchBar } from "../components/SearchBar";
@@ -53,17 +53,6 @@ export default function Index() {
           <p class="hero-subtitle">Share and discover optimal llama.cpp configurations</p>
           <p class="hero-description">Community-driven benchmarks for local LLM inference</p>
 
-          <div class="hero-actions">
-            <A href="/submissions" class="btn btn--primary btn--lg">
-              <LayoutGrid size={18} />
-              Browse Configurations
-            </A>
-            <A href="/submit" class="btn btn--outline btn--lg">
-              <Plus size={18} />
-              Submit Your Config
-            </A>
-          </div>
-
           <form onSubmit={handleSearch} class="hero-search-form">
             <SearchBar
               value={searchQuery()}
@@ -72,89 +61,12 @@ export default function Index() {
               debounceMs={300}
               showSuggestions={true}
             />
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" size="lg">
               Search
             </Button>
           </form>
         </div>
       </section>
-
-      <Section>
-        <div class="section-header">
-          <h2 class="section-heading section-heading--with-icon">
-            <LayoutGrid size={20} />
-            Recent Configurations
-          </h2>
-          <A href="/submissions?sort=createdAt" class="btn btn--ghost btn--sm">
-            View all
-            <ChevronRight size={14} />
-          </A>
-        </div>
-
-        <Show when={recentSubmissions.loading}>
-          <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
-            Loading configurations...
-          </div>
-        </Show>
-
-        <Show when={!recentSubmissions.loading && recentSubmissions()}>
-          <Show when={recentSubmissions()!.data.length === 0}>
-            <div class="card" style={{ padding: "2rem", "text-align": "center" }}>
-              <p class="text-muted mb-4">No configurations yet. Be the first to share yours!</p>
-              <A href="/submit" class="btn btn--primary">
-                <Plus size={16} />
-                Submit Configuration
-              </A>
-            </div>
-          </Show>
-
-          <Show when={recentSubmissions()!.data.length > 0}>
-            <div class="stagger-in featured-grid">
-              <For each={recentSubmissions()!.data}>
-                {(submission) => <SubmissionCard submission={submission} />}
-              </For>
-            </div>
-          </Show>
-        </Show>
-      </Section>
-
-      <Section>
-        <div class="section-header">
-          <h2 class="section-heading section-heading--with-icon">
-            <TrendingUp size={20} />
-            Top Rated
-          </h2>
-          <A href="/submissions?sort=score" class="btn btn--ghost btn--sm">
-            View all
-            <ChevronRight size={14} />
-          </A>
-        </div>
-
-        <Show when={topSubmissions.loading}>
-          <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
-            Loading configurations...
-          </div>
-        </Show>
-
-        <Show when={!topSubmissions.loading && topSubmissions()}>
-          <Show when={topSubmissions()!.data.length === 0}>
-            <p class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
-              No rated configurations yet.
-            </p>
-          </Show>
-
-          <Show when={topSubmissions()!.data.length > 0}>
-            <div
-              class="stagger-in featured-grid"
-              style={{ "grid-template-columns": "repeat(auto-fill, minmax(280px, 1fr))" }}
-            >
-              <For each={topSubmissions()!.data}>
-                {(submission) => <SubmissionCard submission={submission} />}
-              </For>
-            </div>
-          </Show>
-        </Show>
-      </Section>
 
       <Section>
         <div class="section-header">
@@ -209,18 +121,73 @@ export default function Index() {
       </Section>
 
       <Section>
-        <div class="cta-banner">
-          <div class="cta-content">
-            <h3 class="cta-title">Have a configuration to share?</h3>
-            <p class="cta-description">
-              Help the community by sharing your llama.cpp benchmarks and settings.
-            </p>
-          </div>
-          <A href="/submit" class="btn btn--primary btn--lg">
-            <Plus size={18} />
-            Submit Your Config
+        <div class="section-header">
+          <h2 class="section-heading section-heading--with-icon">
+            <Heart size={20} />
+            Top Rated
+          </h2>
+          <A href="/submissions?sort=score" class="btn btn--ghost btn--sm">
+            View all
+            <ChevronRight size={14} />
           </A>
         </div>
+
+        <Show when={topSubmissions.loading}>
+          <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
+            Loading configurations...
+          </div>
+        </Show>
+
+        <Show when={!topSubmissions.loading && topSubmissions()}>
+          <Show when={topSubmissions()!.data.length === 0}>
+            <div class="card" style={{ padding: "2rem", "text-align": "center" }}>
+              <p class="text-muted">No rated configurations yet. Check back soon!</p>
+            </div>
+          </Show>
+
+          <Show when={topSubmissions()!.data.length > 0}>
+            <div class="stagger-in featured-grid">
+              <For each={topSubmissions()!.data}>
+                {(submission) => <SubmissionCard submission={submission} />}
+              </For>
+            </div>
+          </Show>
+        </Show>
+      </Section>
+
+      <Section>
+        <div class="section-header">
+          <h2 class="section-heading section-heading--with-icon">
+            <LayoutGrid size={20} />
+            Recent Configurations
+          </h2>
+          <A href="/submissions?sort=createdAt" class="btn btn--ghost btn--sm">
+            View all
+            <ChevronRight size={14} />
+          </A>
+        </div>
+
+        <Show when={recentSubmissions.loading}>
+          <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
+            Loading configurations...
+          </div>
+        </Show>
+
+        <Show when={!recentSubmissions.loading && recentSubmissions()}>
+          <Show when={recentSubmissions()!.data.length === 0}>
+            <div class="card" style={{ padding: "2rem", "text-align": "center" }}>
+              <p class="text-muted">No configurations yet. Check back soon!</p>
+            </div>
+          </Show>
+
+          <Show when={recentSubmissions()!.data.length > 0}>
+            <div class="stagger-in featured-grid">
+              <For each={recentSubmissions()!.data}>
+                {(submission) => <SubmissionCard submission={submission} />}
+              </For>
+            </div>
+          </Show>
+        </Show>
       </Section>
     </Layout>
   );

@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 
-import { useConnection } from "../lib/ConnectionContext";
-import { AlertTriangle, X } from "./icons";
+import { useConnection } from "../../lib/ConnectionContext";
+import { AlertTriangle, X } from "../icons";
 
 function OfflineBanner() {
   const connection = useConnection();

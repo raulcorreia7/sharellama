@@ -3,8 +3,8 @@ import { createEffect, createSignal, Show } from "solid-js";
 import type { CommentNode } from "@sharellama/model/schemas/comment";
 import type { VoteValue } from "@sharellama/model/schemas/vote";
 
-import { api } from "../lib/api";
-import { Turnstile } from "./Turnstile";
+import { api } from "../../lib/api";
+import { Turnstile } from "../layout/Turnstile";
 
 interface CommentItemProps {
   comment: CommentNode;

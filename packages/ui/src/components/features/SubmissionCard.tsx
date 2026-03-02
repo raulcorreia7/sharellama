@@ -3,7 +3,7 @@ import { A } from "@solidjs/router";
 
 import type { Submission } from "@sharellama/model";
 
-import { generateFingerprint } from "../lib/fingerprint";
+import { generateFingerprint } from "../../lib/fingerprint";
 import { VoteButtons } from "./VoteButtons";
 
 interface SubmissionCardProps {

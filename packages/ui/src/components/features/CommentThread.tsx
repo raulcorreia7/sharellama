@@ -2,9 +2,9 @@ import { createResource, createSignal, For, Show, Suspense } from "solid-js";
 
 import type { CommentNode } from "@sharellama/model/schemas/comment";
 
-import { api } from "../lib/api";
+import { api } from "../../lib/api";
+import { Turnstile } from "../layout/Turnstile";
 import { CommentItem } from "./CommentItem";
-import { Turnstile } from "./Turnstile";
 
 interface CommentThreadProps {
   submissionId: number;

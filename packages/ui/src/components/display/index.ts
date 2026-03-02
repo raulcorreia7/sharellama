@@ -1,3 +1,5 @@
+export type { ArrowIndicatorProps } from "./ArrowIndicator";
+export { ArrowIndicator } from "./ArrowIndicator";
 export type { ButtonProps } from "./Button";
 export { Button } from "./Button";
 export type { CardProps } from "./Card";
@@ -8,6 +10,8 @@ export type { HeadingLevel, HeadingProps } from "./Heading";
 export { Heading } from "./Heading";
 export type { SkeletonProps } from "./Skeleton";
 export { Skeleton } from "./Skeleton";
+export type { StatTagProps } from "./StatTag";
+export { StatTag } from "./StatTag";
 export type { TagProps } from "./Tag";
 export { Tag } from "./Tag";
 export type { TextProps, TextSize, TextVariant, TextWeight } from "./Text";

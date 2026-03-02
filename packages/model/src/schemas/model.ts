@@ -21,6 +21,8 @@ export interface Model {
   org: string | null;
   orgAvatar: string | null;
   configCount: number;
+  downloads: number | null;
+  likes: number | null;
   lastValidated: string | null;
   createdAt: string;
 }

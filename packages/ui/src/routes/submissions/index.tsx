@@ -4,7 +4,7 @@ import { useSearchParams } from "@solidjs/router";
 
 import { Button } from "../../components/display/Button";
 import { defaultFilters, FilterSidebar, type FilterState } from "../../components/FilterSidebar";
-import { ChevronLeft, ChevronRight, Filter, Plus, X } from "../../components/icons";
+import { ChevronLeft, ChevronRight, Filter, X } from "../../components/icons";
 import { Breadcrumbs, EmptyState, Layout, LoadingState, PageHeader } from "../../components/layout";
 import { SearchBar } from "../../components/SearchBar";
 import { SubmissionCard } from "../../components/SubmissionCard";
@@ -133,16 +133,7 @@ export default function SubmissionsList() {
 
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Submissions" }]} />
 
-      <PageHeader
-        title="Submissions"
-        description="Community benchmarks and configurations"
-        actions={
-          <a href="/submit" class="btn btn--primary btn--sm">
-            <Plus size={14} />
-            Submit
-          </a>
-        }
-      />
+      <PageHeader title="Submissions" description="Community benchmarks and configurations" />
 
       <div class="filter-toggle lg:hidden" style={{ "margin-bottom": "1rem" }}>
         <Button type="button" onClick={() => setSidebarOpen(true)} variant="secondary" size="sm">
@@ -163,8 +154,8 @@ export default function SubmissionsList() {
           onClose={() => setSidebarOpen(false)}
         />
 
-        <div class="submissions-main">
-          <div style={{ "margin-bottom": "1rem" }}>
+        <div class="submissions-content">
+          <div class="submissions-search-wrapper">
             <SearchBar
               value={filters().q}
               onChange={handleSearchChange}
@@ -263,14 +254,16 @@ export default function SubmissionsList() {
             </div>
 
             <Show when={submissions()!.data.length === 0}>
-              <EmptyState
-                message="No submissions found matching your criteria."
-                action={
-                  <Button type="button" onClick={clearAllFilters} variant="ghost">
-                    Clear all filters
-                  </Button>
-                }
-              />
+              <div class="empty-state-wrapper">
+                <EmptyState
+                  message="No submissions found matching your criteria."
+                  action={
+                    <Button type="button" onClick={clearAllFilters} variant="ghost">
+                      Clear all filters
+                    </Button>
+                  }
+                />
+              </div>
             </Show>
 
             <div class="stagger-in submissions-grid">

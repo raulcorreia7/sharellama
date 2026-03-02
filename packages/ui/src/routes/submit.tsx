@@ -24,7 +24,24 @@ const QUICK_FIELDS: Array<{
 }> = [
   { name: "gpu", label: "GPU", type: "text", placeholder: "e.g., RTX 4090" },
   { name: "tokensPerSecond", label: "Tokens/sec", type: "number" },
-  { name: "quantization", label: "Quant", type: "text", placeholder: "e.g., Q4_K_M" },
+];
+
+const QUANTIZATION_OPTIONS = [
+  "Q4_K_M",
+  "Q4_K_S",
+  "Q5_K_M",
+  "Q5_K_S",
+  "Q6_K",
+  "Q8_0",
+  "Q2_K",
+  "Q3_K_M",
+  "Q3_K_S",
+  "Q4_0",
+  "Q4_1",
+  "Q5_0",
+  "Q5_1",
+  "F16",
+  "F32",
 ];
 
 const ADVANCED_SECTIONS: Array<{
@@ -358,13 +375,17 @@ export default function SubmitPage() {
                 <label for="quantization" class="submit-label">
                   Quantization
                 </label>
-                <Input
+                <select
                   id="quantization"
-                  type="text"
-                  placeholder="e.g., Q4_K_M"
+                  class="input"
                   value={getFieldValue("quantization")}
-                  onInput={(e) => updateField("quantization", e.currentTarget.value || undefined)}
-                />
+                  onChange={(e) => updateField("quantization", e.currentTarget.value || undefined)}
+                >
+                  <option value="">Select quantization...</option>
+                  <For each={QUANTIZATION_OPTIONS}>
+                    {(quant) => <option value={quant}>{quant}</option>}
+                  </For>
+                </select>
               </div>
               <div class="submit-field">
                 <label for="quantSource" class="submit-label">
