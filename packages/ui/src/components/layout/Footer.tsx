@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { Show } from "solid-js";
+import { Code, Github } from "../icons";
 
 interface FooterStats {
   totalSubmissions: number;
@@ -24,7 +25,12 @@ export function Footer(props: FooterProps) {
           <span class="footer-brand-text">ShareLlama</span>
         </div>
         <nav class="footer-nav">
-          <A href="/api" class="footer-nav-link">
+          <A
+            href="/api"
+            class="footer-nav-link"
+            style={{ display: "flex", "align-items": "center", gap: "0.375rem" }}
+          >
+            <Code size={16} />
             API
           </A>
           <a
@@ -32,7 +38,9 @@ export function Footer(props: FooterProps) {
             target="_blank"
             rel="noopener noreferrer"
             class="footer-nav-link"
+            style={{ display: "flex", "align-items": "center", gap: "0.375rem" }}
           >
+            <Github size={16} />
             GitHub
           </a>
         </nav>

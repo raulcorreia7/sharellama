@@ -12,6 +12,7 @@ import {
   jsonb,
   unique,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
@@ -21,6 +22,7 @@ export const models = pgTable(
     slug: varchar("slug", { length: 255 }).primaryKey(),
     name: varchar("name", { length: 200 }).notNull(),
     org: varchar("org", { length: 200 }),
+    orgAvatar: varchar("org_avatar", { length: 500 }),
     configCount: integer("config_count").default(0).notNull(),
     lastValidated: timestamp("last_validated"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -130,10 +132,21 @@ export const hfCache = pgTable("hf_cache", {
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
 
+export const scheduledTasks = pgTable("scheduled_tasks", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).unique().notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  intervalSeconds: integer("interval_seconds").notNull(),
+  lastRun: timestamp("last_run"),
+  nextRun: timestamp("next_run").notNull(),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl);
   return drizzle(client, {
-    schema: { models, submissions, votes, comments, commentVotes, hfCache },
+    schema: { models, submissions, votes, comments, commentVotes, hfCache, scheduledTasks },
   });
 }
 

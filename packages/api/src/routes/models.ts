@@ -1,15 +1,48 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
 import { eq, desc, asc, sql, and, ilike } from "drizzle-orm";
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { models, submissions } from "@sharellama/database";
-import { listModelsQuerySchema } from "@sharellama/model/schemas/model";
+import { models, submissions, hfCache, scheduledTasks } from "@sharellama/database";
+import { listModelsQuerySchema, createModelSchema } from "@sharellama/model/schemas/model";
+import { getRunningTasks, runTaskNow } from "../lib/tasks";
 
 const app = new Hono<{ Bindings: Env }>();
 
 const HF_API = "https://huggingface.co/api";
+
+const orgAvatarCache = new Map<string, string>();
+
+async function fetchOrgAvatar(org: string): Promise<string | undefined> {
+  if (orgAvatarCache.has(org)) {
+    return orgAvatarCache.get(org);
+  }
+
+  try {
+    const response = await fetch(`https://huggingface.co/${org}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) return undefined;
+
+    const html = await response.text();
+    const match = html.match(
+      /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
+    );
+
+    if (match && match[1]) {
+      const avatarUrl = match[1];
+      orgAvatarCache.set(org, avatarUrl);
+      return avatarUrl;
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const SUPPORTED_PIPELINES = [
   "text-generation",
@@ -132,6 +165,167 @@ app.get("/search", async (c) => {
   return c.json({ data: results });
 });
 
+app.post("/ensure", zValidator("json", createModelSchema), async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const { slug } = c.req.valid("json");
+
+  const existing = await db.select().from(models).where(eq(models.slug, slug)).limit(1);
+  if (existing[0]) {
+    return c.json({ data: existing[0], created: false });
+  }
+
+  const hfData = await fetchWithTimeout<HFModel>(`${HF_API}/models/${slug}`);
+  if (!hfData) {
+    return c.json({ error: "Model not found on Hugging Face" }, 404);
+  }
+
+  const [org, ...nameParts] = slug.split("/");
+  const name = nameParts.join("/") || slug;
+  const orgAvatar = org ? await fetchOrgAvatar(org) : undefined;
+
+  const [created] = await db
+    .insert(models)
+    .values({
+      slug,
+      name,
+      org: org || null,
+      orgAvatar,
+      configCount: 0,
+    })
+    .returning();
+
+  return c.json({ data: created, created: true });
+});
+
+const populateSchema = z.object({
+  limit: z.number().min(1).max(500).optional().default(100),
+  force: z.boolean().optional().default(false),
+});
+
+app.post("/populate", zValidator("json", populateSchema), async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const { limit, force } = c.req.valid("json");
+
+  const running = getRunningTasks();
+  if (running.includes("refresh_models") && !force) {
+    return c.json({ error: "Population already in progress" }, 409);
+  }
+
+  const params = new URLSearchParams({
+    filter: SUPPORTED_PIPELINES.join(","),
+    limit: String(limit),
+    sort: "downloads",
+    direction: "-1",
+  });
+
+  const data = await fetchWithTimeout<HFModel[]>(`${HF_API}/models?${params}`, 60000);
+
+  if (!data) {
+    return c.json({ error: "Failed to fetch models from HuggingFace API" }, 502);
+  }
+
+  let added = 0;
+  let updated = 0;
+
+  for (const hfModel of data) {
+    const slug = hfModel.id;
+    const parts = slug.split("/");
+    const name = (parts.length > 1 ? parts[1] : parts[0]) || slug;
+    const org = parts.length > 1 ? parts[0] || null : null;
+
+    const existing = await db.select().from(models).where(eq(models.slug, slug)).limit(1);
+
+    if (existing.length === 0) {
+      await db.insert(models).values({
+        slug,
+        name,
+        org,
+        configCount: 0,
+      });
+      added++;
+    } else {
+      updated++;
+    }
+  }
+
+  const now = new Date();
+  const task = await db
+    .select()
+    .from(scheduledTasks)
+    .where(eq(scheduledTasks.name, "refresh_models"))
+    .limit(1);
+
+  if (task[0]) {
+    const nextRunTime = new Date(now.getTime() + task[0].intervalSeconds * 1000);
+    await db
+      .update(scheduledTasks)
+      .set({
+        lastRun: now,
+        nextRun: nextRunTime,
+        lastError: null,
+      })
+      .where(eq(scheduledTasks.name, "refresh_models"));
+  }
+
+  return c.json({
+    added,
+    updated,
+    total: data.length,
+    lastPopulated: now.toISOString(),
+  });
+});
+
+app.get("/populate/status", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+
+  const task = await db
+    .select()
+    .from(scheduledTasks)
+    .where(eq(scheduledTasks.name, "refresh_models"))
+    .limit(1);
+
+  if (!task[0]) {
+    return c.json({
+      lastRun: null,
+      nextRun: null,
+      isStale: true,
+      enabled: false,
+    });
+  }
+
+  const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const lastRun = task[0].lastRun ? new Date(task[0].lastRun).getTime() : null;
+  const isStale = !lastRun || now - lastRun > STALE_THRESHOLD_MS;
+
+  return c.json({
+    lastRun: task[0].lastRun?.toISOString() ?? null,
+    nextRun: task[0].nextRun?.toISOString() ?? null,
+    isStale,
+    enabled: task[0].enabled,
+  });
+});
+
+app.post("/populate/trigger", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+
+  const running = getRunningTasks();
+  if (running.includes("refresh_models")) {
+    return c.json({ error: "Population already in progress" }, 409);
+  }
+
+  const result = await runTaskNow(db, c.env, "refresh_models");
+
+  if (!result.success) {
+    return c.json({ error: result.error ?? "Unknown error" }, 500);
+  }
+
+  return c.json({
+    success: true,
+    stats: result.stats,
+  });
+});
+
 app.get("/:slug", async (c) => {
   const db = getDb(getConfig(c.env).db.url);
   const slug = c.req.param("slug");
@@ -178,13 +372,59 @@ app.get("/:slug", async (c) => {
 
   const total = Number(countResult[0]?.count ?? 0);
 
-  const sanitizedConfigs = configs.map((c) => {
-    const { editToken: _, ...rest } = c;
+  const sanitizedConfigs = configs.map((config) => {
+    const { editToken: _, ...rest } = config;
     return rest;
   });
 
+  let hfMetadata = null;
+
+  const cacheKey = `hf_model_${slug}`;
+  const cached = await db.select().from(hfCache).where(eq(hfCache.key, cacheKey)).limit(1);
+
+  const CACHE_TTL = 6 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  if (cached[0] && now - new Date(cached[0].fetchedAt).getTime() < CACHE_TTL) {
+    hfMetadata = cached[0].data as { downloads: number; likes: number };
+  } else {
+    const hfData = await fetchWithTimeout<HFModel>(`${HF_API}/models/${slug}`);
+
+    if (hfData) {
+      hfMetadata = {
+        downloads: hfData.downloads,
+        likes: hfData.likes,
+      };
+
+      const cacheEntry = {
+        key: cacheKey,
+        data: hfMetadata,
+        fetchedAt: new Date(),
+      };
+
+      await db
+        .insert(hfCache)
+        .values(cacheEntry)
+        .onConflictDoUpdate({
+          target: hfCache.key,
+          set: { data: hfMetadata, fetchedAt: new Date() },
+        });
+    }
+  }
+
+  // Fetch org avatar if missing
+  const modelData = model[0];
+  if (modelData.org && !modelData.orgAvatar) {
+    const orgAvatar = await fetchOrgAvatar(modelData.org);
+    if (orgAvatar) {
+      await db.update(models).set({ orgAvatar }).where(eq(models.slug, slug));
+      modelData.orgAvatar = orgAvatar;
+    }
+  }
+
   return c.json({
-    data: model[0],
+    data: modelData,
+    hfMetadata,
     configurations: sanitizedConfigs,
     pagination: {
       page,

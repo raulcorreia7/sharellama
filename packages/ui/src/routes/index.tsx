@@ -161,12 +161,7 @@ export default function Index() {
             <TrendingUp size={20} />
             Trending on Hugging Face
           </h2>
-          <A
-            href="https://huggingface.co/models?library=gguf&sort=trending"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn btn--ghost btn--sm"
-          >
+          <A href="/models" class="btn btn--ghost btn--sm">
             View all
             <ChevronRight size={14} />
           </A>
@@ -182,12 +177,7 @@ export default function Index() {
           <div class="popular-models-grid">
             <For each={trendingModels()!.slice(0, 6)}>
               {(model) => (
-                <A
-                  href={`https://huggingface.co/${model.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="card card--hover popular-model-card"
-                >
+                <A href={`/models/${model.id}`} class="card card--hover popular-model-card">
                   <div class="popular-model-header">
                     <Show when={model.authorAvatar}>
                       <img

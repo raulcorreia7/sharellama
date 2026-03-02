@@ -243,7 +243,7 @@ export default function SubmitPage() {
 
   return (
     <Layout stats={footerStats()}>
-      <Title>Submit Configuration - ShareLlama</Title>
+      <Title>ShareLlama - Submit Configuration</Title>
 
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Submit" }]} />
 

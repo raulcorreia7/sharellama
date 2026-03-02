@@ -15,6 +15,13 @@
       "when": 1772420932375,
       "tag": "0001_broad_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772430000000,
+      "tag": "0002_add_scheduled_tasks",
+      "breakpoints": true
     }
   ]
 }

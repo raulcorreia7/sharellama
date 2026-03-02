@@ -149,7 +149,7 @@ export default function ApiDocs() {
 
   return (
     <Layout stats={footerStats()}>
-      <Title>API Documentation - ShareLlama</Title>
+      <Title>ShareLlama - API Documentation</Title>
 
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "API" }]} />
 

@@ -184,10 +184,10 @@ export default function AdminEditPage() {
   return (
     <Layout>
       <Title>
+        ShareLlama -{" "}
         <Show when={submission()} fallback="Loading...">
           Edit {submission()?.title}
-        </Show>{" "}
-        - ShareLlama
+        </Show>
       </Title>
 
       <Breadcrumbs

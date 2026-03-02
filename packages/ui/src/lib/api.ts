@@ -54,6 +54,10 @@ export interface SubmissionsListResponse {
 
 export interface ModelDetailResponse {
   data: Model;
+  hfMetadata?: {
+    downloads: number;
+    likes: number;
+  } | null;
   configurations: Submission[];
   pagination: {
     page: number;
@@ -269,8 +273,86 @@ class ApiClient {
     return result.data;
   }
 
+  async getModels(params: {
+    q?: string;
+    sort?: "configCount" | "createdAt";
+    order?: "asc" | "desc";
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Model[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params.q) searchParams.set("q", params.q);
+    if (params.sort) searchParams.set("sort", params.sort);
+    if (params.order) searchParams.set("order", params.order);
+    if (params.page) searchParams.set("page", String(params.page));
+    if (params.limit) searchParams.set("limit", String(params.limit));
+
+    return this.request(`/models?${searchParams.toString()}`);
+  }
+
+  async ensureModel(slug: string): Promise<{ data: Model; created: boolean }> {
+    return this.request<{ data: Model; created: boolean }>(`/models/ensure`, {
+      method: "POST",
+      body: JSON.stringify({ slug }),
+    });
+  }
+
   async getModel(slug: string): Promise<ModelDetailResponse> {
     return this.request<ModelDetailResponse>(`/models/${encodeURIComponent(slug)}`);
+  }
+
+  async populateModels(options?: { limit?: number; force?: boolean }): Promise<{
+    added: number;
+    updated: number;
+    total: number;
+    lastPopulated: string;
+  }> {
+    return this.request<{
+      added: number;
+      updated: number;
+      total: number;
+      lastPopulated: string;
+    }>("/models/populate", {
+      method: "POST",
+      body: JSON.stringify({
+        limit: options?.limit ?? 100,
+        force: options?.force ?? false,
+      }),
+    });
+  }
+
+  async getPopulateStatus(): Promise<{
+    lastRun: string | null;
+    nextRun: string | null;
+    isStale: boolean;
+    enabled: boolean;
+  }> {
+    return this.request<{
+      lastRun: string | null;
+      nextRun: string | null;
+      isStale: boolean;
+      enabled: boolean;
+    }>("/models/populate/status");
+  }
+
+  async triggerPopulate(): Promise<{
+    success: boolean;
+    stats?: Record<string, number | string>;
+  }> {
+    return this.request<{
+      success: boolean;
+      stats?: Record<string, number | string>;
+    }>("/models/populate/trigger", {
+      method: "POST",
+    });
   }
 }
 

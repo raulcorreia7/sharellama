@@ -128,7 +128,7 @@ export default function SubmissionsList() {
 
   return (
     <Layout stats={footerStats()}>
-      <Title>Submissions - ShareLlama</Title>
+      <Title>ShareLlama - Submissions</Title>
 
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Submissions" }]} />
 

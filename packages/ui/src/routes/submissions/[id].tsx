@@ -144,7 +144,7 @@ export default function SubmissionDetail() {
   return (
     <Layout stats={footerStats()}>
       <Title>
-        <Suspense>{submission()?.title ?? "Loading..."}</Suspense> - ShareLlama
+        ShareLlama - <Suspense>{submission()?.title ?? "Loading..."}</Suspense>
       </Title>
 
       <Breadcrumbs

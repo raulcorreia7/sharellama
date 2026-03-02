@@ -2,6 +2,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { Hono } from "hono";
 import type { Env } from "./env";
+import { getConfig } from "./env";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
 import huggingfaceRoutes from "./routes/huggingface";
@@ -9,6 +10,8 @@ import modelsRoutes from "./routes/models";
 import submissionsRoutes from "./routes/submissions";
 import votesRoutes from "./routes/votes";
 import { submissionCommentsRoutes, commentsRoutes } from "./routes/comments";
+import { checkAndRunTasks } from "./lib/tasks";
+import { getDb } from "./lib/db";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,6 +24,17 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization", "X-Turnstile-Token", "X-Fingerprint"],
   }),
 );
+
+app.use("*", async (c, next) => {
+  const config = getConfig(c.env);
+  const db = getDb(config.db.url);
+
+  if (c.executionCtx?.waitUntil) {
+    c.executionCtx.waitUntil(checkAndRunTasks(db, c.env));
+  }
+
+  return next();
+});
 
 app.onError((err, c) => {
   console.error("Error:", err);
