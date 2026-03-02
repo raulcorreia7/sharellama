@@ -119,6 +119,14 @@ Search Hugging Face models (proxied).
 }
 ```
 
+### GET /models/:slug/catch-all
+
+Catch-all route for nested model paths (e.g., `/models/Qwen/Qwen3.5-35B-A3B`).
+
+**Response:** Same as GET /models/:slug
+
+---
+
 ### GET /models/:slug
 
 Get model details with configurations.

@@ -43,6 +43,7 @@ What else was considered and why was it rejected?
 
 ## Index
 
-| Number | Title         | Status |
-| ------ | ------------- | ------ |
-| -      | (no ADRs yet) | -      |
+| Number | Title                              | Status   |
+| ------ | ---------------------------------- | -------- |
+| 0001   | Technology Stack Selection         | Accepted |
+| 0002   | Anonymous Identity via Fingerprint | Accepted |

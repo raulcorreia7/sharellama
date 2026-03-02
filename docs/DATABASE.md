@@ -8,13 +8,17 @@ PostgreSQL database managed via Drizzle ORM.
 ┌─────────────┐       ┌─────────────────┐       ┌─────────────┐
 │   models    │◄──────│   submissions   │───────│    votes    │
 └─────────────┘       └─────────────────┘       └─────────────┘
-                              │
-                              │
-                      ┌───────┴───────┐
-                      ▼               ▼
-              ┌─────────────┐ ┌─────────────────┐
-              │  comments   │ │  comment_votes  │
-              └─────────────┘ └─────────────────┘
+      ▲                     │
+      │                     │
+┌─────────────┐     ┌───────┴───────┐
+│org_avatars  │     ▼               ▼
+└─────────────┘ ┌─────────────┐ ┌─────────────────┐
+                │  comments   │ │  comment_votes  │
+                └─────────────┘ └─────────────────┘
+
+┌─────────────┐       ┌─────────────────┐
+│  hf_cache   │       │ scheduled_tasks │
+└─────────────┘       └─────────────────┘
 ```
 
 ---
@@ -30,6 +34,7 @@ Model registry (auto-populated from submissions).
 | slug          | varchar(255) | PK                      | Hugging Face model ID (e.g., `meta-llama/Llama-3-8B`) |
 | name          | varchar(200) | NOT NULL                | Display name                                          |
 | org           | varchar(200) |                         | Organization/author                                   |
+| orgAvatar     | varchar(500) |                         | Organization avatar URL                               |
 | configCount   | integer      | DEFAULT 0, NOT NULL     | Number of configurations                              |
 | lastValidated | timestamp    |                         | Last HF validation check                              |
 | createdAt     | timestamp    | DEFAULT NOW(), NOT NULL | Record creation time                                  |
@@ -38,6 +43,51 @@ Model registry (auto-populated from submissions).
 
 - `org` (for org-based filtering)
 - `configCount` (for sorting by popularity)
+
+---
+
+### hf_cache
+
+Hugging Face API response cache.
+
+| Column    | Type      | Constraints             | Description          |
+| --------- | --------- | ----------------------- | -------------------- |
+| key       | varchar   | PK                      | Cache key            |
+| data      | jsonb     | NOT NULL                | Cached response data |
+| fetchedAt | timestamp | DEFAULT NOW(), NOT NULL | Cache timestamp      |
+
+---
+
+### org_avatars
+
+Organization avatar cache.
+
+| Column    | Type      | Constraints             | Description          |
+| --------- | --------- | ----------------------- | -------------------- |
+| org       | varchar   | PK                      | Organization name    |
+| avatarUrl | varchar   | NOT NULL                | Avatar image URL     |
+| fetchedAt | timestamp | DEFAULT NOW(), NOT NULL | Last fetch timestamp |
+
+**Indexes:**
+
+- `org` (for lookups)
+
+---
+
+### scheduled_tasks
+
+Background task scheduler.
+
+| Column          | Type      | Constraints             | Description                  |
+| --------------- | --------- | ----------------------- | ---------------------------- |
+| id              | serial    | PK                      | Auto-increment ID            |
+| name            | varchar   | UNIQUE, NOT NULL        | Task name                    |
+| enabled         | boolean   | DEFAULT true, NOT NULL  | Task enabled flag            |
+| intervalSeconds | integer   | NOT NULL                | Run interval in seconds      |
+| lastRun         | timestamp |                         | Last execution timestamp     |
+| nextRun         | timestamp | NOT NULL                | Next scheduled run timestamp |
+| lastError       | text      |                         | Last error message           |
+| createdAt       | timestamp | DEFAULT NOW(), NOT NULL | Creation timestamp           |
 
 ---
 

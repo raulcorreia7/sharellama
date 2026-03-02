@@ -29,7 +29,7 @@ Monorepo structure with pnpm workspaces.
 ```
 sharellama/
 ├── packages/
-│   ├── api/           # Cloudflare Workers API
+│   ├── api/              # Cloudflare Workers API
 │   │   ├── src/
 │   │   │   ├── index.ts        # App entry, route registration
 │   │   │   ├── env.ts          # Environment types
@@ -38,30 +38,36 @@ sharellama/
 │   │   │   └── lib/            # DB connection, utilities
 │   │   └── wrangler.toml       # Workers config
 │   │
-│   ├── core/          # Shared config & types
+│   ├── api-client/       # Shared API client
+│   │   └── src/index.ts  # Type-safe API client
+│   │
+│   ├── core/             # Shared config & types
 │   │   └── src/
 │   │       ├── config/         # Environment config schemas (Zod)
-│   │       └── types/          # Shared types (PaginatedResponse, Result, ApiError)
+│   │       ├── types/          # Shared types (PaginatedResponse, Result, ApiError)
+│   │       └── utils/          # Shared utilities
 │   │
-│   ├── database/      # Drizzle ORM schema
-│   │   ├── src/index.ts        # Table definitions, createDb()
-│   │   └── drizzle/            # Migration files
+│   ├── database/         # Drizzle ORM schema
+│   │   ├── src/
+│   │   │   ├── index.ts      # Table definitions, createDb()
+│   │   │   └── helpers.ts    # Database helpers
+│   │   └── drizzle/          # Migration files
 │   │
-│   ├── model/         # Domain types & validation
+│   ├── model/            # Domain types & validation
 │   │   └── src/
 │   │       ├── index.ts        # Core types
 │   │       └── schemas/        # Zod schemas (submission, vote, comment, model)
 │   │
-│   └── ui/            # SolidStart frontend
+│   └── ui/               # SolidStart frontend
 │       ├── src/
 │       │   ├── routes/         # File-based routing
 │       │   ├── components/     # UI components
 │       │   └── lib/            # API client, utilities
 │       └── app.config.ts       # SolidStart config
 │
-├── e2e/               # Playwright E2E tests
-├── scripts/           # Build/deploy scripts
-└── docs/              # Documentation
+├── e2e/                  # Playwright E2E tests
+├── scripts/              # Build/deploy scripts
+└── docs/                 # Documentation
 ```
 
 ## Data Flow

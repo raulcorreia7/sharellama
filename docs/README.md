@@ -40,8 +40,47 @@ Architecture Decision Records (ADRs) are stored in `docs/decisions/`:
 
 ## Maintenance
 
-Documentation is reviewed:
+### Review Triggers
 
-- On significant feature changes
-- Before releases
-- When drift is detected (code vs docs mismatch)
+Documentation must be updated:
+
+1. **On significant feature changes** - New endpoints, schema changes, new pages
+2. **Before releases** - Final review of all changed docs
+3. **When drift is detected** - Code no longer matches documentation
+4. **After bug fixes** - Update runbook if new troubleshooting steps discovered
+
+### Documentation Checklist
+
+When making changes, update:
+
+| Change Type          | Update These Docs             |
+| -------------------- | ----------------------------- |
+| New API endpoint     | API.md, TYPES.md              |
+| Schema change        | TYPES.md, DATABASE.md         |
+| New table/column     | DATABASE.md                   |
+| New config/env       | DEVELOPMENT.md, DEPLOYMENT.md |
+| New command          | README.md, DEVELOPMENT.md     |
+| Deployment change    | DEPLOYMENT.md                 |
+| Operations procedure | RUNBOOK.md                    |
+| Architecture change  | ARCHITECTURE.md               |
+
+### Quality Checks
+
+Before merging:
+
+- [ ] Code matches documented behavior
+- [ ] Examples are tested and working
+- [ ] Links are not broken
+- [ ] Screenshots/diagrams are current
+- [ ] Migration steps documented (if breaking change)
+
+### Documentation Drift Detection
+
+Signs of drift:
+
+- Code comments contradict docs
+- API responses don't match documented format
+- Commands no longer work as documented
+- Missing new tables/columns in schema docs
+
+If you spot drift, create an issue or update immediately.

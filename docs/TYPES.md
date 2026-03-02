@@ -118,6 +118,12 @@ interface CommentNode {
 
 ### Model
 
+**Create Model** (`createModelSchema`)
+
+| Field | Type   | Required | Constraints |
+| ----- | ------ | -------- | ----------- |
+| slug  | string | Yes      | 1-255 chars |
+
 **List Query** (`listModelsQuerySchema`)
 
 | Field | Type   | Default     | Constraints            |
@@ -135,9 +141,48 @@ interface Model {
   slug: string;
   name: string;
   org: string | null;
+  orgAvatar: string | null;
   configCount: number;
   lastValidated: string | null;
   createdAt: string;
+}
+```
+
+**HF Model Result** (Hugging Face API)
+
+```typescript
+interface HFModelResult {
+  id: string;
+  modelId: string;
+  author: string;
+  downloads: number;
+  likes: number;
+  pipeline_tag: string | null;
+  library_name: string | null;
+}
+```
+
+**Quant Repo** (Quantization repository)
+
+```typescript
+interface QuantRepo {
+  id: string;
+  provider: string;
+  downloads: number;
+  likes: number;
+  quantType: string | null;
+  url: string;
+}
+```
+
+**Quant File** (GGUF file in repo)
+
+```typescript
+interface QuantFile {
+  name: string;
+  filename: string;
+  sizeBytes: number;
+  url: string;
 }
 ```
 
@@ -250,13 +295,71 @@ interface MetaResponse {
 
 ## Import Paths
 
+### Schemas
+
 ```typescript
-// Schemas
 import { createSubmissionSchema } from "@sharellama/model/schemas/submission";
 import { createVoteSchema, type VoteValue } from "@sharellama/model/schemas/vote";
 import { createCommentSchema, type CommentNode } from "@sharellama/model/schemas/comment";
 import { listModelsQuerySchema, type Model } from "@sharellama/model/schemas/model";
+```
 
-// Core types
-import { type Submission, type PaginatedResponse, type ApiError } from "@sharellama/model";
+### Types
+
+```typescript
+// From @sharellama/model
+import {
+  type Submission,
+  type PaginatedResponse,
+  type ApiError,
+  type HFModelResult,
+  type QuantRepo,
+  type QuantFile,
+} from "@sharellama/model";
+
+// From @sharellama/core/types
+import { type Result, type ApiError } from "@sharellama/core/types";
+```
+
+### Database Types
+
+```typescript
+import {
+  models,
+  submissions,
+  votes,
+  comments,
+  commentVotes,
+  hfCache,
+  scheduledTasks,
+  orgAvatars,
+  type Db,
+} from "@sharellama/database";
+
+// Infer type from schema
+type Model = typeof models.$inferSelect;
+type NewSubmission = typeof submissions.$inferInsert;
+```
+
+## Type Utilities
+
+### Infer Types from Zod Schemas
+
+```typescript
+import { z } from "zod";
+import { createSubmissionSchema } from "@sharellama/model/schemas/submission";
+
+type SubmissionInput = z.infer<typeof createSubmissionSchema>;
+```
+
+### Infer Types from Database Schema
+
+```typescript
+import { submissions } from "@sharellama/database";
+
+// Select type (includes all fields)
+type Submission = typeof submissions.$inferSelect;
+
+// Insert type (excludes auto-generated fields)
+type NewSubmission = typeof submissions.$inferInsert;
 ```

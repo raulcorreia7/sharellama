@@ -118,6 +118,42 @@ SET config_count = (
 );
 ```
 
+### Clear HF Cache
+
+If Hugging Face data is stale:
+
+```sql
+-- Clear all cache
+DELETE FROM hf_cache;
+
+-- Clear specific key
+DELETE FROM hf_cache WHERE key = 'trending';
+```
+
+### Reset Scheduled Tasks
+
+If task scheduler is stuck:
+
+```sql
+-- Reset all tasks to run immediately
+UPDATE scheduled_tasks SET next_run = NOW(), last_error = NULL;
+
+-- Disable a specific task
+UPDATE scheduled_tasks SET enabled = false WHERE name = 'task-name';
+```
+
+### Clear Organization Avatar Cache
+
+If org avatars are outdated:
+
+```sql
+-- Clear all avatars
+DELETE FROM org_avatars;
+
+-- Clear specific org
+DELETE FROM org_avatars WHERE org = 'org-name';
+```
+
 ---
 
 ## Database Maintenance
@@ -184,6 +220,8 @@ pnpm deploy:api  # or deploy:ui
 | API latency p99 | Cloudflare Workers | > 2s            |
 | DB connections  | Neon dashboard     | > 80% limit     |
 | DB storage      | Neon dashboard     | > 80% limit     |
+| Cache hit rate  | hf_cache table     | < 50%           |
+| Task failures   | scheduled_tasks    | > 3 consecutive |
 
 ### Log Queries
 
@@ -197,6 +235,19 @@ wrangler tail
 
 ```bash
 wrangler tail --format json | jq 'select(.event.request.status >= 500)'
+```
+
+**Database health:**
+
+```bash
+# Check cache table size
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM hf_cache;"
+
+# Check scheduled tasks status
+psql $DATABASE_URL -c "SELECT name, enabled, last_run, next_run, last_error FROM scheduled_tasks;"
+
+# Check cache age
+psql $DATABASE_URL -c "SELECT key, NOW() - fetchedAt as age FROM hf_cache ORDER BY fetched_at;"
 ```
 
 ---
@@ -265,6 +316,19 @@ Common indexes (already created):
 - `submissions(gpu)`
 - `submissions(score)`
 - `submissions(created_at)`
+- `submissions(tokens_per_second)`
 - `models(config_count)`
+- `models(org)`
+- `org_avatars(org)`
 
 Add new indexes in `packages/database/src/index.ts` and run `pnpm db:push`.
+
+### Cache Management
+
+**HF Cache TTL:** 6 hours (default)
+
+To adjust cache duration, modify the cache check logic in API routes. Cache is stored in `hf_cache` table.
+
+**Org Avatar Cache:** Persistent until manually cleared
+
+Organization avatars are cached indefinitely in `org_avatars` table. Clear when org changes avatar.

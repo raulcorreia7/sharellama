@@ -90,29 +90,83 @@ Or use Neon's SQL editor to run migration SQL.
 
 ### API (Cloudflare Workers Secrets)
 
-| Secret                 | Source                 |
-| ---------------------- | ---------------------- |
-| `DATABASE_URL`         | Neon connection string |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile   |
+Set via `wrangler secret put <NAME>` or GitHub Secrets:
 
-### UI (Build-time)
+| Secret                 | Source                 | Required |
+| ---------------------- | ---------------------- | -------- |
+| `DATABASE_URL`         | Neon connection string | Yes      |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile   | Yes      |
+| `ENVIRONMENT`          | Environment name       | No       |
+| `BASE_URL`             | Base URL for links     | No       |
 
-| Variable                  | Value                       |
-| ------------------------- | --------------------------- |
-| `VITE_API_URL`            | `https://api.sharellama.io` |
-| `VITE_TURNSTILE_SITE_KEY` | Turnstile site key          |
+### UI (Build-time Environment Variables)
+
+Set during build/deploy:
+
+| Variable                  | Value                       | Required |
+| ------------------------- | --------------------------- | -------- |
+| `VITE_API_URL`            | `https://api.sharellama.io` | Yes      |
+| `VITE_TURNSTILE_SITE_KEY` | Turnstile site key          | Yes      |
+
+### Local Development (.env)
+
+Copy `.env.example` to `.env`:
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sharellama
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA  # Test key
+VITE_API_URL=http://localhost:8787
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA  # Test key
+```
 
 ## CI/CD
 
-GitHub Actions workflow in `.github/workflows/`:
+GitHub Actions workflows in `.github/workflows/`:
 
-1. On push to main: run tests
-2. On tag: deploy to production
+| Workflow     | Trigger           | Description                |
+| ------------ | ----------------- | -------------------------- |
+| `ci.yml`     | Push to main, PRs | Run tests, lint, typecheck |
+| `deploy.yml` | On tag (v\*)      | Deploy to production       |
+| `e2e.yml`    | Push to main, PRs | Run Playwright E2E tests   |
 
 ### Required GitHub Secrets
 
-- `CLOUDFLARE_API_TOKEN` - for Workers/Pages deploy
-- `NEON_DATABASE_URL` - for production migrations
+| Secret                  | Purpose                           | Required For      |
+| ----------------------- | --------------------------------- | ----------------- |
+| `CLOUDFLARE_API_TOKEN`  | Workers and Pages deployment      | Production deploy |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account identification | Production deploy |
+| `NEON_DATABASE_URL`     | Production database migrations    | Database setup    |
+| `TURNSTILE_SECRET_KEY`  | API Turnstile verification        | API deployment    |
+
+### Deployment Flow
+
+1. **CI Pipeline** (on PR/push):
+   - Install dependencies
+   - Run typecheck
+   - Run lint
+   - Run unit tests
+   - Run E2E tests
+
+2. **CD Pipeline** (on tag):
+   - Build all packages
+   - Deploy API to Cloudflare Workers
+   - Deploy UI to Cloudflare Pages
+   - Run database migrations (if any)
+
+### Manual Deployment
+
+For hotfixes or manual deploys:
+
+```bash
+# Deploy everything
+pnpm deploy
+
+# Deploy API only
+pnpm deploy:api
+
+# Deploy UI only
+pnpm deploy:ui
+```
 
 ## Monitoring
 
