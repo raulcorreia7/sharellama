@@ -26,10 +26,10 @@ test.describe("Homepage", () => {
     await expect(page.getByRole("heading", { name: /top rated/i })).toBeVisible();
   });
 
-  test("shows popular models section", async ({ page }) => {
+  test("shows trending models section", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: /popular models/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /trending on hugging face/i })).toBeVisible();
   });
 
   test("shows CTA banner", async ({ page }) => {
