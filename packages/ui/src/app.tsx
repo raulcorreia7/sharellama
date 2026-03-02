@@ -17,6 +17,18 @@ export default function App() {
               rel="stylesheet"
               href="https://fonts.bunny.net/css?family=inter:wght@400;500;600;700|jetbrains-mono:wght@400;500"
             />
+            <script>
+              {`
+                (function() {
+                  try {
+                    const theme = localStorage.getItem('ll-theme');
+                    if (theme) {
+                      document.documentElement.setAttribute('data-theme', theme);
+                    }
+                  } catch (e) {}
+                })();
+              `}
+            </script>
             <Title>ShareLlama</Title>
             <OfflineBanner />
             <Suspense>
