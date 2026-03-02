@@ -124,9 +124,17 @@ export const commentVotes = pgTable(
   }),
 );
 
+export const hfCache = pgTable("hf_cache", {
+  key: varchar("key", { length: 100 }).primaryKey(),
+  data: jsonb("data").notNull(),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+});
+
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl);
-  return drizzle(client, { schema: { models, submissions, votes, comments, commentVotes } });
+  return drizzle(client, {
+    schema: { models, submissions, votes, comments, commentVotes, hfCache },
+  });
 }
 
 export type Db = ReturnType<typeof createDb>;

@@ -8,6 +8,13 @@
       "when": 1772407643561,
       "tag": "0000_sleepy_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772420932375,
+      "tag": "0001_broad_nico_minoru",
+      "breakpoints": true
     }
   ]
 }
