@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { submissions, votes } from "@sharellama/database";
+import { submissions, votes, atomicIncrement } from "@sharellama/database";
 import { createVoteSchema, type VoteValue } from "@sharellama/model/schemas/vote";
 import { rateLimitVote } from "../middleware/rateLimit";
 
@@ -57,7 +57,7 @@ app.post("/:id/vote", rateLimitVote, zValidator("json", createVoteSchema), async
       const [updated] = await db
         .update(submissions)
         .set({
-          score: sql`${submissions.score} - ${value}`,
+          score: atomicIncrement(submissions.score, -value),
           updatedAt: new Date(),
         })
         .where(eq(submissions.id, submissionId))
@@ -77,7 +77,7 @@ app.post("/:id/vote", rateLimitVote, zValidator("json", createVoteSchema), async
     const [updatedSubmission] = await db
       .update(submissions)
       .set({
-        score: sql`${submissions.score} + ${voteDiff}`,
+        score: atomicIncrement(submissions.score, voteDiff),
         updatedAt: new Date(),
       })
       .where(eq(submissions.id, submissionId))
@@ -98,7 +98,7 @@ app.post("/:id/vote", rateLimitVote, zValidator("json", createVoteSchema), async
   const [updated] = await db
     .update(submissions)
     .set({
-      score: sql`${submissions.score} + ${value}`,
+      score: atomicIncrement(submissions.score, value),
       updatedAt: new Date(),
     })
     .where(eq(submissions.id, submissionId))

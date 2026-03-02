@@ -1,10 +1,10 @@
 import { Hono, type Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { eq, desc, asc, sql, and, gte, lte, or } from "drizzle-orm";
+import { eq, desc, asc, sql, and, gte, lte, or, ilike } from "drizzle-orm";
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { submissions, votes, models } from "@sharellama/database";
+import { submissions, votes, models, atomicIncrement, safeDecrement } from "@sharellama/database";
 import {
   createSubmissionSchema,
   updateSubmissionSchema,
@@ -111,7 +111,7 @@ app.post(
 
     await db
       .update(models)
-      .set({ configCount: sql`${models.configCount} + 1` })
+      .set({ configCount: atomicIncrement(models.configCount) })
       .where(eq(models.slug, data.modelSlug));
 
     const baseUrl = config.api.baseUrl ?? new URL(c.req.url).origin;
@@ -156,15 +156,12 @@ app.get("/", zValidator("query", listSubmissionsQuerySchema), async (c) => {
   if (q) {
     const searchPattern = `%${q}%`;
     conditions.push(
-      or(
-        sql`${submissions.title} ILIKE ${searchPattern}`,
-        sql`${submissions.description} ILIKE ${searchPattern}`,
-      ),
+      or(ilike(submissions.title, searchPattern), ilike(submissions.description, searchPattern)),
     );
   }
   if (modelSlug) conditions.push(eq(submissions.modelSlug, modelSlug));
-  if (gpu) conditions.push(sql`${submissions.gpu} ILIKE ${`%${gpu}%`}`);
-  if (cpu) conditions.push(sql`${submissions.cpu} ILIKE ${`%${cpu}%`}`);
+  if (gpu) conditions.push(ilike(submissions.gpu, `%${gpu}%`));
+  if (cpu) conditions.push(ilike(submissions.cpu, `%${cpu}%`));
   if (quantization) conditions.push(eq(submissions.quantization, quantization));
   if (runtime) conditions.push(eq(submissions.runtime, runtime));
   if (quantSource) conditions.push(eq(submissions.quantSource, quantSource));
@@ -408,7 +405,7 @@ app.delete("/:id/admin/:token", async (c) => {
 
   await db
     .update(models)
-    .set({ configCount: sql`GREATEST(0, ${models.configCount} - 1)` })
+    .set({ configCount: safeDecrement(models.configCount) })
     .where(eq(models.slug, modelSlug));
 
   return c.body(null, 204);

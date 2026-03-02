@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { comments, commentVotes, submissions } from "@sharellama/database";
+import { comments, commentVotes, submissions, atomicIncrement } from "@sharellama/database";
 import {
   createCommentSchema,
   listCommentsQuerySchema,
@@ -213,7 +213,7 @@ commentsRoutes.post(
         await db.delete(commentVotes).where(eq(commentVotes.id, existingVote[0].id));
         await db
           .update(comments)
-          .set({ score: sql`${comments.score} - ${data.value}` })
+          .set({ score: atomicIncrement(comments.score, -data.value) })
           .where(eq(comments.id, commentId));
       } else {
         await db
@@ -222,7 +222,7 @@ commentsRoutes.post(
           .where(eq(commentVotes.id, existingVote[0].id));
         await db
           .update(comments)
-          .set({ score: sql`${comments.score} + ${data.value * 2}` })
+          .set({ score: atomicIncrement(comments.score, data.value * 2) })
           .where(eq(comments.id, commentId));
       }
     } else {
@@ -233,7 +233,7 @@ commentsRoutes.post(
       });
       await db
         .update(comments)
-        .set({ score: sql`${comments.score} + ${data.value}` })
+        .set({ score: atomicIncrement(comments.score, data.value) })
         .where(eq(comments.id, commentId));
     }
 
