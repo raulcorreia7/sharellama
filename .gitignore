@@ -32,3 +32,4 @@ coverage/
 .parcel-cache/
 .turbo/
 .dev.vars
+.vinxi/
