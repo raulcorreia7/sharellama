@@ -5,6 +5,8 @@ export interface HFModel {
   downloads: number;
   likes: number;
   pipeline_tag?: string;
+  author?: string;
+  authorAvatar?: string;
 }
 
 function getApiBase(): string {

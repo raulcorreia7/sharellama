@@ -1,8 +1,19 @@
 import { Hono } from "hono";
+import { eq } from "drizzle-orm";
+import type { Env } from "../env";
+import { getConfig } from "../env";
+import { getDb } from "../lib/db";
+import { hfCache } from "@sharellama/database";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 const HF_API_BASE = "https://huggingface.co/api";
+const CACHE_TTL_MS = 15 * 60 * 1000;
+
+interface CachedTrendingData {
+  models: HFModel[];
+  source: string;
+}
 
 interface TFTrendingResponse {
   recentlyTrending: Array<{
@@ -11,6 +22,7 @@ interface TFTrendingResponse {
       downloads: number;
       likes: number;
       pipeline_tag?: string;
+      author?: string;
     };
     repoType: string;
   }>;
@@ -21,6 +33,8 @@ interface HFModel {
   downloads: number;
   likes: number;
   pipeline_tag?: string;
+  author?: string;
+  authorAvatar?: string;
 }
 
 interface HFModelDetail {
@@ -73,22 +87,94 @@ function extractProvider(repoId: string): string {
   return repoId.split("/")[0] || "unknown";
 }
 
+const orgAvatarCache = new Map<string, string>();
+
+async function fetchOrgAvatar(org: string): Promise<string | undefined> {
+  if (orgAvatarCache.has(org)) {
+    return orgAvatarCache.get(org);
+  }
+
+  try {
+    const response = await fetch(`https://huggingface.co/${org}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) return undefined;
+
+    const html = await response.text();
+    const match = html.match(
+      /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
+    );
+
+    if (match && match[1]) {
+      const avatarUrl = match[1];
+      orgAvatarCache.set(org, avatarUrl);
+      return avatarUrl;
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function getCachedTrending(db: ReturnType<typeof getDb>): Promise<CachedTrendingData | null> {
+  const cached = await db.select().from(hfCache).where(eq(hfCache.key, "trending")).limit(1);
+  if (!cached[0]) return null;
+
+  const age = Date.now() - cached[0].fetchedAt.getTime();
+  if (age > CACHE_TTL_MS) return null;
+
+  return cached[0].data as CachedTrendingData;
+}
+
+async function setCachedTrending(
+  db: ReturnType<typeof getDb>,
+  data: CachedTrendingData,
+): Promise<void> {
+  await db
+    .insert(hfCache)
+    .values({ key: "trending", data, fetchedAt: new Date() })
+    .onConflictDoUpdate({
+      target: hfCache.key,
+      set: { data, fetchedAt: new Date() },
+    });
+}
+
 app.get("/trending", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+
+  const cached = await getCachedTrending(db);
+  if (cached) {
+    return c.json(cached);
+  }
+
   try {
     const data = await fetchWithTimeout<TFTrendingResponse>(`${HF_API_BASE}/trending`);
 
     if (data?.recentlyTrending) {
-      const models = data.recentlyTrending
+      const trendingItems = data.recentlyTrending
         .filter((item) => item.repoType === "model")
-        .slice(0, 10)
-        .map((item) => ({
-          id: item.repoData.id,
-          downloads: item.repoData.downloads,
-          likes: item.repoData.likes,
-          pipeline_tag: item.repoData.pipeline_tag,
-        }));
+        .slice(0, 10);
 
-      return c.json({ models, source: "trending" });
+      const models = await Promise.all(
+        trendingItems.map(async (item) => {
+          const author = item.repoData.id.split("/")[0] ?? "";
+          const authorAvatar = author ? await fetchOrgAvatar(author) : undefined;
+          return {
+            id: item.repoData.id,
+            downloads: item.repoData.downloads,
+            likes: item.repoData.likes,
+            pipeline_tag: item.repoData.pipeline_tag,
+            author,
+            authorAvatar,
+          };
+        }),
+      );
+
+      const result: CachedTrendingData = { models, source: "trending" };
+      await setCachedTrending(db, result);
+      return c.json(result);
     }
 
     return c.redirect("/hf/top-liked");
