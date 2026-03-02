@@ -56,20 +56,38 @@ async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string)
       avatarUrl = ORG_AVATAR_PLACEHOLDER;
     }
 
-    await db.insert(orgAvatars).values({
-      org: orgLower,
-      avatarUrl,
-      fetchedAt: new Date(),
-    });
+    await db
+      .insert(orgAvatars)
+      .values({
+        org: orgLower,
+        avatarUrl,
+        fetchedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: orgAvatars.org,
+        set: {
+          avatarUrl,
+          fetchedAt: new Date(),
+        },
+      });
 
     orgAvatarCache.set(orgLower, avatarUrl);
     return avatarUrl;
   } catch {
-    await db.insert(orgAvatars).values({
-      org: orgLower,
-      avatarUrl: ORG_AVATAR_PLACEHOLDER,
-      fetchedAt: new Date(),
-    });
+    await db
+      .insert(orgAvatars)
+      .values({
+        org: orgLower,
+        avatarUrl: ORG_AVATAR_PLACEHOLDER,
+        fetchedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: orgAvatars.org,
+        set: {
+          avatarUrl: ORG_AVATAR_PLACEHOLDER,
+          fetchedAt: new Date(),
+        },
+      });
 
     orgAvatarCache.set(orgLower, ORG_AVATAR_PLACEHOLDER);
     return ORG_AVATAR_PLACEHOLDER;
