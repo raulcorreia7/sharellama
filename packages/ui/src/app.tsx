@@ -1,9 +1,11 @@
-import { MetaProvider, Title, Link } from "@solidjs/meta";
+import { Suspense } from "solid-js";
+import { Link, MetaProvider, Title } from "@solidjs/meta";
 import { Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
-import { Suspense } from "solid-js";
-import { ConnectionProvider } from "./lib/ConnectionContext";
+
 import OfflineBanner from "./components/OfflineBanner";
+import { ConnectionProvider } from "./lib/ConnectionContext";
+
 import "./app.css";
 
 export default function App() {

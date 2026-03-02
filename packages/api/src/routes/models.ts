@@ -1,23 +1,37 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
-import { eq, desc, asc, sql, and, ilike } from "drizzle-orm";
+
+import { hfCache, models, orgAvatars, scheduledTasks, submissions } from "@sharellama/database";
+import { createModelSchema, listModelsQuerySchema } from "@sharellama/model/schemas/model";
+
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
-import { models, submissions, hfCache, scheduledTasks } from "@sharellama/database";
-import { listModelsQuerySchema, createModelSchema } from "@sharellama/model/schemas/model";
 import { getRunningTasks, runTaskNow } from "../lib/tasks";
+
+import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
+import { Hono } from "hono";
+import { z } from "zod";
 
 const app = new Hono<{ Bindings: Env }>();
 
 const HF_API = "https://huggingface.co/api";
 
+const ORG_AVATAR_PLACEHOLDER = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg";
+
 const orgAvatarCache = new Map<string, string>();
 
-async function fetchOrgAvatar(org: string): Promise<string | undefined> {
-  if (orgAvatarCache.has(org)) {
-    return orgAvatarCache.get(org);
+async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string): Promise<string> {
+  const orgLower = org.toLowerCase();
+
+  if (orgAvatarCache.has(orgLower)) {
+    return orgAvatarCache.get(orgLower)!;
+  }
+
+  const cached = await db.select().from(orgAvatars).where(eq(orgAvatars.org, orgLower)).limit(1);
+
+  if (cached[0]) {
+    orgAvatarCache.set(orgLower, cached[0].avatarUrl);
+    return cached[0].avatarUrl;
   }
 
   try {
@@ -25,22 +39,40 @@ async function fetchOrgAvatar(org: string): Promise<string | undefined> {
       signal: AbortSignal.timeout(3000),
     });
 
-    if (!response.ok) return undefined;
+    let avatarUrl: string | null = null;
 
-    const html = await response.text();
-    const match = html.match(
-      /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
-    );
+    if (response.ok) {
+      const html = await response.text();
+      const match = html.match(
+        /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
+      );
 
-    if (match && match[1]) {
-      const avatarUrl = match[1];
-      orgAvatarCache.set(org, avatarUrl);
-      return avatarUrl;
+      if (match && match[1]) {
+        avatarUrl = match[1];
+      }
     }
 
-    return undefined;
+    if (!avatarUrl) {
+      avatarUrl = ORG_AVATAR_PLACEHOLDER;
+    }
+
+    await db.insert(orgAvatars).values({
+      org: orgLower,
+      avatarUrl,
+      fetchedAt: new Date(),
+    });
+
+    orgAvatarCache.set(orgLower, avatarUrl);
+    return avatarUrl;
   } catch {
-    return undefined;
+    await db.insert(orgAvatars).values({
+      org: orgLower,
+      avatarUrl: ORG_AVATAR_PLACEHOLDER,
+      fetchedAt: new Date(),
+    });
+
+    orgAvatarCache.set(orgLower, ORG_AVATAR_PLACEHOLDER);
+    return ORG_AVATAR_PLACEHOLDER;
   }
 }
 
@@ -79,6 +111,42 @@ async function fetchWithTimeout<T>(url: string, timeout = 5000): Promise<T | nul
     return await response.json();
   } catch {
     return null;
+  }
+}
+
+async function fetchAndCacheHfMetadata(db: ReturnType<typeof getDb>, slug: string): Promise<void> {
+  try {
+    const hfData = await fetchWithTimeout<HFModel>(`${HF_API}/models/${slug}`, 10000);
+
+    if (!hfData) {
+      console.error(`Failed to fetch HF metadata for ${slug}`);
+      return;
+    }
+
+    const cacheKey = `hf_model_${slug}`;
+    const metadata = {
+      downloads: hfData.downloads,
+      likes: hfData.likes,
+    };
+
+    await db
+      .insert(hfCache)
+      .values({
+        key: cacheKey,
+        data: metadata,
+        fetchedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: hfCache.key,
+        set: { data: metadata, fetchedAt: new Date() },
+      });
+
+    const [org] = slug.split("/");
+    if (org) {
+      await fetchAndCacheOrgAvatar(db, org);
+    }
+  } catch (error) {
+    console.error(`Background metadata fetch failed for ${slug}:`, error);
   }
 }
 
@@ -181,7 +249,7 @@ app.post("/ensure", zValidator("json", createModelSchema), async (c) => {
 
   const [org, ...nameParts] = slug.split("/");
   const name = nameParts.join("/") || slug;
-  const orgAvatar = org ? await fetchOrgAvatar(org) : undefined;
+  const orgAvatar = org ? await fetchAndCacheOrgAvatar(db, org) : null;
 
   const [created] = await db
     .insert(models)
@@ -189,7 +257,7 @@ app.post("/ensure", zValidator("json", createModelSchema), async (c) => {
       slug,
       name,
       org: org || null,
-      orgAvatar,
+      orgAvatar: orgAvatar || null,
       configCount: 0,
     })
     .returning();
@@ -330,10 +398,26 @@ app.get("/:slug", async (c) => {
   const db = getDb(getConfig(c.env).db.url);
   const slug = c.req.param("slug");
 
-  const model = await db.select().from(models).where(eq(models.slug, slug)).limit(1);
+  let model = await db.select().from(models).where(eq(models.slug, slug)).limit(1);
 
   if (!model[0]) {
-    return c.json({ error: "Model not found" }, 404);
+    const [org, ...nameParts] = slug.split("/");
+    const name = nameParts.join("/") || slug;
+
+    const created = await db
+      .insert(models)
+      .values({
+        slug,
+        name,
+        org: org || null,
+        orgAvatar: null,
+        configCount: 0,
+      })
+      .returning();
+
+    model = created;
+
+    c.executionCtx.waitUntil(fetchAndCacheHfMetadata(db, slug));
   }
 
   const gpu = c.req.query("gpu");
@@ -387,39 +471,13 @@ app.get("/:slug", async (c) => {
 
   if (cached[0] && now - new Date(cached[0].fetchedAt).getTime() < CACHE_TTL) {
     hfMetadata = cached[0].data as { downloads: number; likes: number };
-  } else {
-    const hfData = await fetchWithTimeout<HFModel>(`${HF_API}/models/${slug}`);
-
-    if (hfData) {
-      hfMetadata = {
-        downloads: hfData.downloads,
-        likes: hfData.likes,
-      };
-
-      const cacheEntry = {
-        key: cacheKey,
-        data: hfMetadata,
-        fetchedAt: new Date(),
-      };
-
-      await db
-        .insert(hfCache)
-        .values(cacheEntry)
-        .onConflictDoUpdate({
-          target: hfCache.key,
-          set: { data: hfMetadata, fetchedAt: new Date() },
-        });
-    }
   }
 
-  // Fetch org avatar if missing
-  const modelData = model[0];
+  const modelData = model[0]!;
   if (modelData.org && !modelData.orgAvatar) {
-    const orgAvatar = await fetchOrgAvatar(modelData.org);
-    if (orgAvatar) {
-      await db.update(models).set({ orgAvatar }).where(eq(models.slug, slug));
-      modelData.orgAvatar = orgAvatar;
-    }
+    const orgAvatar = await fetchAndCacheOrgAvatar(db, modelData.org);
+    await db.update(models).set({ orgAvatar }).where(eq(models.slug, slug));
+    modelData.orgAvatar = orgAvatar;
   }
 
   return c.json({

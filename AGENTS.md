@@ -60,6 +60,39 @@ pnpm test:e2e -- path/to/test.spec.ts
 pnpm test:e2e:ui                                 # Interactive UI
 ```
 
+## Linting & Formatting
+
+### Commands
+
+```bash
+pnpm lint                # Run ESLint
+pnpm lint --fix          # Auto-fix issues
+pnpm format              # Format with Prettier
+pnpm format:check        # Check formatting
+```
+
+### Import Sorting (ESLint)
+
+Imports are automatically sorted into groups (excludes test files):
+
+1. SolidJS packages (`solid-js`, `@solidjs`)
+2. Other scoped packages (`@\\w`)
+3. Lucide icons (`lucide-solid`)
+4. Internal packages (`@sharellama`)
+5. Relative imports (`../`, `./`)
+
+Run `pnpm lint --fix` to auto-sort imports.
+
+### Code Formatting (Prettier)
+
+- **Semi**: true
+- **Quotes**: double
+- **Trailing comma**: all (ES5)
+- **Tab width**: 2
+- **Print width**: 100
+
+Run `pnpm format` to format all files.
+
 ## Code Style Guidelines
 
 ### TypeScript

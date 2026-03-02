@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { config } from "dotenv";
 import { spawn } from "child_process";
-import { writeFileSync, existsSync, unlinkSync } from "fs";
-import { resolve, dirname } from "path";
+import { config } from "dotenv";
+import { existsSync, unlinkSync, writeFileSync } from "fs";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

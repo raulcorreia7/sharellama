@@ -1,17 +1,18 @@
 import {
-  createDb,
-  submissions,
-  votes,
   comments,
   commentVotes,
-  models,
+  createDb,
   type Db,
+  models,
+  submissions,
+  votes,
 } from "@sharellama/database";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
-import { createServerConfig, type Config } from "@sharellama/model/config";
+import { type Config, createServerConfig } from "@sharellama/model/config";
 
-export { submissions, votes, comments, commentVotes, models };
-export { eq, and, desc, asc, sql };
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+
+export { comments, commentVotes, models, submissions, votes };
+export { and, asc, desc, eq, sql };
 
 export type TestDb = Db;
 

@@ -1,11 +1,12 @@
-import { Title } from "@solidjs/meta";
 import { For, Show } from "solid-js";
-import { Layout, Breadcrumbs, PageHeader, Section } from "../components/layout";
-import { CopyButton } from "../components/forms";
+import { Title } from "@solidjs/meta";
+
 import { CodeBlock } from "../components/display";
+import { CopyButton } from "../components/forms";
+import { Breadcrumbs, Layout, PageHeader, Section } from "../components/layout";
 import { api, DEFAULT_STATS } from "../lib/api";
-import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 import { getUiConfig } from "../lib/config";
+import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 
 interface Endpoint {
   method: "GET" | "POST" | "PATCH" | "DELETE";

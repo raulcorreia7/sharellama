@@ -1,17 +1,18 @@
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
-import { Hono } from "hono";
-import type { Env } from "./env";
-import { getConfig } from "./env";
+import { getDb } from "./lib/db";
+import { checkAndRunTasks } from "./lib/tasks";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
+import { commentsRoutes, submissionCommentsRoutes } from "./routes/comments";
 import huggingfaceRoutes from "./routes/huggingface";
 import modelsRoutes from "./routes/models";
 import submissionsRoutes from "./routes/submissions";
 import votesRoutes from "./routes/votes";
-import { submissionCommentsRoutes, commentsRoutes } from "./routes/comments";
-import { checkAndRunTasks } from "./lib/tasks";
-import { getDb } from "./lib/db";
+import type { Env } from "./env";
+import { getConfig } from "./env";
+
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 
 const app = new Hono<{ Bindings: Env }>();
 

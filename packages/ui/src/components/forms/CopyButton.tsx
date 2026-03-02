@@ -1,6 +1,7 @@
 import { createSignal, Show } from "solid-js";
-import { Check, Copy } from "../icons";
+
 import { Button } from "../display/Button";
+import { Check, Copy } from "../icons";
 
 export interface CopyButtonProps {
   text: string;

@@ -1,16 +1,17 @@
 import type {
+  HFModelResult,
   Submission,
   SubmissionInput,
   SubmissionUpdate,
-  HFModelResult,
 } from "@sharellama/model";
-import type { Model } from "@sharellama/model/schemas/model";
-import type { VoteValue, CreateVoteInput } from "@sharellama/model/schemas/vote";
 import type {
   CommentNode,
   CreateCommentInput,
   VoteCommentInput,
 } from "@sharellama/model/schemas/comment";
+import type { Model } from "@sharellama/model/schemas/model";
+import type { CreateVoteInput, VoteValue } from "@sharellama/model/schemas/vote";
+
 import { fetchWithRetry } from "./apiUtils";
 import { getUiConfig } from "./config";
 

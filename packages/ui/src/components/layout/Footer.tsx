@@ -1,5 +1,6 @@
-import { A } from "@solidjs/router";
 import { Show } from "solid-js";
+import { A } from "@solidjs/router";
+
 import { Code, Github } from "../icons";
 
 interface FooterStats {

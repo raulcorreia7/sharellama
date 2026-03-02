@@ -1,14 +1,15 @@
+import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createSignal, For, Show, createEffect, on } from "solid-js";
 import { useSearchParams } from "@solidjs/router";
-import { api, type SubmissionFilters, DEFAULT_META, DEFAULT_SUBMISSIONS } from "../../lib/api";
-import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
-import { SubmissionCard } from "../../components/SubmissionCard";
-import { FilterSidebar, defaultFilters, type FilterState } from "../../components/FilterSidebar";
-import { SearchBar } from "../../components/SearchBar";
-import { Layout, Breadcrumbs, PageHeader, EmptyState, LoadingState } from "../../components/layout";
+
 import { Button } from "../../components/display/Button";
-import { Plus, Filter, ChevronLeft, ChevronRight, X } from "../../components/icons";
+import { defaultFilters, FilterSidebar, type FilterState } from "../../components/FilterSidebar";
+import { ChevronLeft, ChevronRight, Filter, Plus, X } from "../../components/icons";
+import { Breadcrumbs, EmptyState, Layout, LoadingState, PageHeader } from "../../components/layout";
+import { SearchBar } from "../../components/SearchBar";
+import { SubmissionCard } from "../../components/SubmissionCard";
+import { api, DEFAULT_META, DEFAULT_SUBMISSIONS, type SubmissionFilters } from "../../lib/api";
+import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
 
 function parseFiltersFromParams(params: Record<string, string | undefined>): FilterState {
   return {

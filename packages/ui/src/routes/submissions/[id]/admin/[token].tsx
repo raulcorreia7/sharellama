@@ -1,12 +1,14 @@
+import { createResource, createSignal, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createSignal, createResource, Show, For } from "solid-js";
-import { useParams, useNavigate, A } from "@solidjs/router";
-import { submissionUpdateSchema, type SubmissionUpdate } from "@sharellama/model";
-import { api } from "../../../../lib/api";
-import { Layout } from "../../../../components/layout";
-import { Breadcrumbs } from "../../../../components/layout/Breadcrumbs";
+import { A, useNavigate, useParams } from "@solidjs/router";
+
+import { type SubmissionUpdate, submissionUpdateSchema } from "@sharellama/model";
+
 import { Button } from "../../../../components/display/Button";
 import { Card } from "../../../../components/display/Card";
+import { Layout } from "../../../../components/layout";
+import { Breadcrumbs } from "../../../../components/layout/Breadcrumbs";
+import { api } from "../../../../lib/api";
 
 type FormField = {
   name: keyof SubmissionUpdate;

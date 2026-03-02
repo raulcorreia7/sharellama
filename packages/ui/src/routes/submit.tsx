@@ -1,16 +1,18 @@
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createSignal, Show, For, createEffect } from "solid-js";
 import { A } from "@solidjs/router";
-import { submissionSchema, type SubmissionInput, type HFModelResult } from "@sharellama/model";
-import { api, DEFAULT_STATS } from "../lib/api";
-import { useResourceWithDefault } from "../lib/useResourceWithDefault";
-import { Turnstile } from "../components/Turnstile";
-import { generateFingerprint } from "../lib/fingerprint";
-import { parseLlamaCppCommand } from "../lib/commandParser";
-import { Layout, Breadcrumbs, PageHeader, Section } from "../components/layout";
+
+import { type HFModelResult, type SubmissionInput, submissionSchema } from "@sharellama/model";
+
 import { Button } from "../components/display";
-import { Input, Textarea, CopyButton } from "../components/forms";
-import { Check, ChevronRight, Loader2, Search, ExternalLink } from "../components/icons";
+import { CopyButton, Input, Textarea } from "../components/forms";
+import { Check, ChevronRight, ExternalLink, Loader2, Search } from "../components/icons";
+import { Breadcrumbs, Layout, PageHeader, Section } from "../components/layout";
+import { Turnstile } from "../components/Turnstile";
+import { api, DEFAULT_STATS } from "../lib/api";
+import { parseLlamaCppCommand } from "../lib/commandParser";
+import { generateFingerprint } from "../lib/fingerprint";
+import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 
 const REQUIRED_FIELDS = ["title", "runtime", "modelSlug"] as const;
 

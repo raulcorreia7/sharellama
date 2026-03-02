@@ -1,5 +1,5 @@
-import { A } from "@solidjs/router";
 import { For } from "solid-js";
+import { A } from "@solidjs/router";
 
 export interface BreadcrumbItem {
   label: string;

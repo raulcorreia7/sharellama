@@ -1,6 +1,7 @@
 import { JSX } from "solid-js";
-import { Header } from "./Header";
+
 import { Footer, type FooterProps } from "./Footer";
+import { Header } from "./Header";
 
 export interface LayoutProps {
   children: JSX.Element;

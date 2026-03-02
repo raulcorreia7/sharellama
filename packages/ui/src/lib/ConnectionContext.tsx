@@ -1,11 +1,11 @@
 import {
-  createContext,
-  useContext,
-  createSignal,
-  onMount,
-  onCleanup,
-  type ParentComponent,
   type Accessor,
+  createContext,
+  createSignal,
+  onCleanup,
+  onMount,
+  type ParentComponent,
+  useContext,
 } from "solid-js";
 
 export interface ConnectionState {

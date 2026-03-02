@@ -1,5 +1,6 @@
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 
 export default tseslint.config(
   {
@@ -14,6 +15,8 @@ export default tseslint.config(
       "*.config.ts",
       "**/e2e/**",
       "**/coverage/**",
+      "**/*.test.ts",
+      "**/*.spec.ts",
     ],
   },
   eslint.configs.recommended,
@@ -33,6 +36,9 @@ export default tseslint.config(
     },
   },
   {
+    plugins: {
+      "simple-import-sort": simpleImportSort,
+    },
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -42,6 +48,24 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [
+            // SolidJS packages
+            ["^solid-js", "^@solidjs"],
+            // Other @ packages
+            ["^@\\w"],
+            // Lucide icons
+            ["^lucide-solid"],
+            // Internal packages
+            ["^@sharellama"],
+            // Relative imports
+            ["^\\.\\.(?!/?$)", "^\\.\\./?$", "^\\./(?=.*/)(?!/?$)", "^\\.(?!/?$)", "^\\./?$"],
+          ],
+        },
+      ],
+      "simple-import-sort/exports": "error",
     },
   },
 );

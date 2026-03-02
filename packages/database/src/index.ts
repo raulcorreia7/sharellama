@@ -1,20 +1,20 @@
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  serial,
+  smallint,
+  text,
+  timestamp,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import {
-  pgTable,
-  serial,
-  varchar,
-  text,
-  integer,
-  real,
-  smallint,
-  timestamp,
-  jsonb,
-  unique,
-  index,
-  boolean,
-} from "drizzle-orm/pg-core";
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const models = pgTable(
   "models",
@@ -132,6 +132,18 @@ export const hfCache = pgTable("hf_cache", {
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
 
+export const orgAvatars = pgTable(
+  "org_avatars",
+  {
+    org: varchar("org", { length: 100 }).primaryKey(),
+    avatarUrl: varchar("avatar_url", { length: 500 }).notNull(),
+    fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    orgIdx: index().on(table.org),
+  }),
+);
+
 export const scheduledTasks = pgTable("scheduled_tasks", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).unique().notNull(),
@@ -146,10 +158,19 @@ export const scheduledTasks = pgTable("scheduled_tasks", {
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl);
   return drizzle(client, {
-    schema: { models, submissions, votes, comments, commentVotes, hfCache, scheduledTasks },
+    schema: {
+      models,
+      submissions,
+      votes,
+      comments,
+      commentVotes,
+      hfCache,
+      scheduledTasks,
+      orgAvatars,
+    },
   });
 }
 
 export type Db = ReturnType<typeof createDb>;
 
-export * from "./helpers/index.js";
+export * from "./helpers";

@@ -1,10 +1,12 @@
+import { createResource, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createResource, Show, For } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { ExternalLink, Download, Heart } from "lucide-solid";
-import { api } from "../../lib/api";
-import { Layout, Breadcrumbs, Section, EmptyState } from "../../components/layout";
+
+import { Download, ExternalLink, Heart } from "lucide-solid";
+
+import { Breadcrumbs, EmptyState, Layout, LoadingState, Section } from "../../components/layout";
 import { SubmissionCard } from "../../components/SubmissionCard";
+import { api } from "../../lib/api";
 
 function formatNumber(num: number): string {
   if (num >= 1_000_000) {
@@ -27,16 +29,8 @@ export default function ModelDetail() {
   };
 
   const modelResource = createResource(slug, async (s) => {
-    try {
-      const result = await api.getModel(s);
-      return result;
-    } catch (error) {
-      if ((error as any).status === 404) {
-        await api.ensureModel(s);
-        return api.getModel(s);
-      }
-      throw error;
-    }
+    const result = await api.getModel(s);
+    return result;
   });
   const model = modelResource[0];
   const { refetch } = modelResource[1];
@@ -156,9 +150,7 @@ export default function ModelDetail() {
 
         <Show when={model.loading}>
           <Section>
-            <div class="text-muted" style={{ padding: "2rem 0", "text-align": "center" }}>
-              Loading model information...
-            </div>
+            <LoadingState message="Loading model information..." />
           </Section>
         </Show>
 

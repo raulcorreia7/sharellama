@@ -1,18 +1,21 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { eq, desc, and } from "drizzle-orm";
-import type { Env } from "../env";
-import { getConfig } from "../env";
-import { getDb } from "../lib/db";
-import { comments, commentVotes, submissions, atomicIncrement } from "@sharellama/database";
+
+import { atomicIncrement, comments, commentVotes, submissions } from "@sharellama/database";
 import {
+  type CommentNode,
   createCommentSchema,
   listCommentsQuerySchema,
   voteCommentSchema,
-  type CommentNode,
 } from "@sharellama/model/schemas/comment";
+
+import type { Env } from "../env";
+import { getConfig } from "../env";
+import { getDb } from "../lib/db";
 import { rateLimitComment, rateLimitVote } from "../middleware/rateLimit";
 import { verifyTurnstile } from "../middleware/turnstile";
+
+import { and, desc, eq } from "drizzle-orm";
+import { Hono } from "hono";
 
 async function hashFingerprint(fingerprint: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -285,4 +288,4 @@ commentsRoutes.delete("/:id", async (c) => {
   return c.json({ data: sanitizeCommentForResponse(updated) });
 });
 
-export { submissionCommentsRoutes, commentsRoutes };
+export { commentsRoutes, submissionCommentsRoutes };

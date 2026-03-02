@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+
 import { ThemeSwitcher } from "../ThemeSwitcher";
 
 export function Header() {

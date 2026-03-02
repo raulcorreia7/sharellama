@@ -1,18 +1,20 @@
+import { createEffect, createResource, createSignal, For, onMount, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createSignal, For, Show, createResource, createEffect, onMount } from "solid-js";
 import { A } from "@solidjs/router";
+
+import type { HFModelResult } from "@sharellama/model";
+
+import { ChevronRight, LayoutGrid } from "../../components/icons";
 import {
-  Layout,
   Breadcrumbs,
-  PageHeader,
   EmptyState,
+  Layout,
   LoadingState,
+  PageHeader,
   Section,
 } from "../../components/layout";
-import { api } from "../../lib/api";
 import { SearchBar } from "../../components/SearchBar";
-import { ChevronRight, LayoutGrid } from "../../components/icons";
-import type { HFModelResult } from "@sharellama/model";
+import { api } from "../../lib/api";
 
 function timeAgo(dateString: string | null): string {
   if (!dateString) return "never";

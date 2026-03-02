@@ -1,5 +1,7 @@
 import { defineConfig } from "@solidjs/start/config";
+
 import tailwindcss from "@tailwindcss/vite";
+
 import path from "path";
 import { fileURLToPath } from "url";
 

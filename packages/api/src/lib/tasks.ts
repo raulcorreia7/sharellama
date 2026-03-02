@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
-import { models, scheduledTasks } from "@sharellama/database";
 import type { Db } from "@sharellama/database";
+import { models, scheduledTasks } from "@sharellama/database";
+
+import { eq } from "drizzle-orm";
 
 const HF_API = "https://huggingface.co/api";
 const SUPPORTED_PIPELINES = [

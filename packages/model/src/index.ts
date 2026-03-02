@@ -85,8 +85,8 @@ export interface ApiError {
   message?: string;
 }
 
-export * from "./schemas/submission.js";
-export * from "./schemas/vote.js";
+export * from "./config/index.js";
 export * from "./schemas/comment.js";
 export * from "./schemas/model.js";
-export * from "./config/index.js";
+export * from "./schemas/submission.js";
+export * from "./schemas/vote.js";

@@ -1,1 +1,1 @@
-export * from "./atomic.js";
+export * from "./atomic";

@@ -1,16 +1,17 @@
+import { createResource, createSignal, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { A, useNavigate } from "@solidjs/router";
-import { For, Show, createSignal, createResource } from "solid-js";
-import { api, DEFAULT_SUBMISSIONS } from "../lib/api";
-import { useResourceWithDefault } from "../lib/useResourceWithDefault";
-import { SubmissionCard } from "../components/SubmissionCard";
-import { HeroMesh } from "../components/HeroMesh";
-import { SearchBar } from "../components/SearchBar";
+
 import { Button } from "../components/display/Button";
+import { HeroMesh } from "../components/HeroMesh";
+import { ArrowRight, ChevronRight, Heart, LayoutGrid, Plus, TrendingUp } from "../components/icons";
 import { Layout } from "../components/layout";
 import { Section } from "../components/layout/Section";
-import { ChevronRight, Plus, LayoutGrid, TrendingUp, ArrowRight, Heart } from "../components/icons";
-import { formatModelName, getTrendingModels, formatDownloads } from "../lib/huggingface";
+import { SearchBar } from "../components/SearchBar";
+import { SubmissionCard } from "../components/SubmissionCard";
+import { api, DEFAULT_SUBMISSIONS } from "../lib/api";
+import { formatDownloads, formatModelName, getTrendingModels } from "../lib/huggingface";
+import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 
 export default function Index() {
   const navigate = useNavigate();

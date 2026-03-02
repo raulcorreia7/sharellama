@@ -1,6 +1,7 @@
-import { z } from "zod";
 import { createConfig, EnvSource } from "@sharellama/core/config";
-import { serverSchema, dbSchema, authSchema, hfSchema } from "@sharellama/core/config/schemas";
+import { authSchema, dbSchema, hfSchema, serverSchema } from "@sharellama/core/config/schemas";
+
+import { z } from "zod";
 
 const apiSchema = z.object({
   baseUrl: z.string().optional(),

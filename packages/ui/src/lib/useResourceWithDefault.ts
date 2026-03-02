@@ -1,4 +1,5 @@
 import { createResource, type Resource } from "solid-js";
+
 import { useConnection } from "./ConnectionContext";
 
 export function useResourceWithDefault<T>(fetcher: () => Promise<T>, defaultValue: T): Resource<T>;

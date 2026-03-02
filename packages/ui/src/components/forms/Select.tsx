@@ -1,4 +1,4 @@
-import { JSX, splitProps, For } from "solid-js";
+import { For, JSX, splitProps } from "solid-js";
 
 export interface SelectOption {
   value: string;

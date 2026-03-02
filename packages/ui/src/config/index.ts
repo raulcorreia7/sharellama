@@ -1,5 +1,6 @@
-import { z } from "zod";
 import { createConfig, EnvSource } from "@sharellama/core/config";
+
+import { z } from "zod";
 
 const configSchema = z.object({
   api: z.object({

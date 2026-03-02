@@ -46,12 +46,8 @@
           "name": "comment_votes_comment_id_comments_id_fk",
           "tableFrom": "comment_votes",
           "tableTo": "comments",
-          "columnsFrom": [
-            "comment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["comment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -61,10 +57,7 @@
         "comment_votes_voter_hash_comment_id_unique": {
           "name": "comment_votes_voter_hash_comment_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "voter_hash",
-            "comment_id"
-          ]
+          "columns": ["voter_hash", "comment_id"]
         }
       },
       "policies": {},
@@ -126,12 +119,8 @@
           "name": "comments_submission_id_submissions_id_fk",
           "tableFrom": "comments",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -139,12 +128,8 @@
           "name": "comments_parent_id_comments_id_fk",
           "tableFrom": "comments",
           "tableTo": "comments",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -532,12 +517,8 @@
           "name": "submissions_model_slug_models_slug_fk",
           "tableFrom": "submissions",
           "tableTo": "models",
-          "columnsFrom": [
-            "model_slug"
-          ],
-          "columnsTo": [
-            "slug"
-          ],
+          "columnsFrom": ["model_slug"],
+          "columnsTo": ["slug"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -590,12 +571,8 @@
           "name": "votes_submission_id_submissions_id_fk",
           "tableFrom": "votes",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -605,10 +582,7 @@
         "votes_voter_hash_submission_id_unique": {
           "name": "votes_voter_hash_submission_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "voter_hash",
-            "submission_id"
-          ]
+          "columns": ["voter_hash", "submission_id"]
         }
       },
       "policies": {},

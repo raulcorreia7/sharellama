@@ -1,2 +1,2 @@
-export * from "./time.js";
 export * from "./formatters.js";
+export * from "./time.js";

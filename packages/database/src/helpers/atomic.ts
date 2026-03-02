@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 /**
@@ -7,7 +7,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
  * @param amount - The amount to increment by (default: 1)
  * @returns SQL expression for atomic increment
  */
-export function atomicIncrement(column: AnyPgColumn, amount = 1): any {
+export function atomicIncrement(column: AnyPgColumn, amount = 1): SQL {
   return sql`${column} + ${amount}`;
 }
 
@@ -17,7 +17,7 @@ export function atomicIncrement(column: AnyPgColumn, amount = 1): any {
  * @param amount - The amount to decrement by (default: 1)
  * @returns SQL expression for atomic decrement
  */
-export function atomicDecrement(column: AnyPgColumn, amount = 1): any {
+export function atomicDecrement(column: AnyPgColumn, amount = 1): SQL {
   return sql`${column} - ${amount}`;
 }
 
@@ -27,6 +27,6 @@ export function atomicDecrement(column: AnyPgColumn, amount = 1): any {
  * @param amount - The amount to decrement by (default: 1)
  * @returns SQL expression for safe atomic decrement with GREATEST(0, ...)
  */
-export function safeDecrement(column: AnyPgColumn, amount = 1): any {
+export function safeDecrement(column: AnyPgColumn, amount = 1): SQL {
   return sql`GREATEST(0, ${column} - ${amount})`;
 }

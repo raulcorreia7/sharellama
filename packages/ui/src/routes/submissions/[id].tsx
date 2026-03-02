@@ -1,22 +1,23 @@
+import { createMemo, createResource, createSignal, For, onMount, Show, Suspense } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { createResource, createSignal, Show, Suspense, onMount, createMemo, For } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { api, DEFAULT_STATS } from "../../lib/api";
-import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
-import { generateFingerprint } from "../../lib/fingerprint";
-import { getUiConfig } from "../../lib/config";
-import { VoteButtons } from "../../components/VoteButtons";
+
 import { CommentThread } from "../../components/CommentThread";
+import { Button } from "../../components/display/Button";
+import { CopyButton } from "../../components/forms";
 import {
-  Layout,
   Breadcrumbs,
+  EmptyState,
+  Layout,
+  LoadingState,
   PageHeader,
   Section,
-  EmptyState,
-  LoadingState,
 } from "../../components/layout";
-import { CopyButton } from "../../components/forms";
-import { Button } from "../../components/display/Button";
+import { VoteButtons } from "../../components/VoteButtons";
+import { api, DEFAULT_STATS } from "../../lib/api";
+import { getUiConfig } from "../../lib/config";
+import { generateFingerprint } from "../../lib/fingerprint";
+import { useResourceWithDefault } from "../../lib/useResourceWithDefault";
 
 interface FieldGroup {
   title: string;

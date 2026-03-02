@@ -1,5 +1,6 @@
+import { type Env, getConfig } from "../env";
+
 import type { Context, MiddlewareHandler } from "hono";
-import { getConfig, type Env } from "../env";
 
 interface TurnstileVerifyResponse {
   success: boolean;
