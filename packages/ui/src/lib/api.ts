@@ -106,6 +106,9 @@ class ApiClient {
     });
 
     if (!result.ok) {
+      if (options.signal?.aborted) {
+        throw new Error("Aborted");
+      }
       console.error(`API request failed: ${path}`, result.error);
       return defaultValue;
     }
@@ -245,6 +248,7 @@ class ApiClient {
     commentId: number,
     value: VoteValue,
     fingerprint: string,
+    signal?: AbortSignal,
   ): Promise<{ data: CommentNode }> {
     return this.request<{ data: CommentNode }>(`/comments/${commentId}/vote`, {
       method: "POST",
@@ -252,6 +256,7 @@ class ApiClient {
       headers: {
         "X-Fingerprint": fingerprint,
       },
+      ...(signal ? { signal } : {}),
     });
   }
 
@@ -264,11 +269,12 @@ class ApiClient {
     });
   }
 
-  async searchModels(query: string): Promise<HFModelResult[]> {
+  async searchModels(query: string, signal?: AbortSignal): Promise<HFModelResult[]> {
     const params = new URLSearchParams({ q: query, limit: "10" });
     const result = await this.requestWithDefault<{ data: HFModelResult[] }>(
       `/models/search?${params.toString()}`,
       { data: [] },
+      signal ? { signal } : undefined,
     );
     return result.data;
   }
