@@ -19,6 +19,7 @@ export interface Model {
   slug: string;
   name: string;
   org: string | null;
+  orgAvatar: string | null;
   configCount: number;
   lastValidated: string | null;
   createdAt: string;

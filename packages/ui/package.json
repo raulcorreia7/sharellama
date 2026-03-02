@@ -13,13 +13,13 @@
   "dependencies": {
     "@sharellama/core": "workspace:*",
     "@sharellama/model": "workspace:*",
-    "zod": "^4.3.6",
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.15.4",
     "@solidjs/start": "^1.3.2",
-    "lucide-solid": "^0.575.0",
+    "lucide-solid": "^0.576.0",
     "solid-js": "^1.9.11",
-    "vinxi": "^0.5.11"
+    "vinxi": "^0.5.11",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",

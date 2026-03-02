@@ -5,6 +5,7 @@ export interface SectionProps {
   card?: boolean;
   headerAction?: JSX.Element;
   icon?: JSX.Element;
+  iconUrl?: string;
   children: JSX.Element;
 }
 
@@ -20,6 +21,13 @@ export function Section(props: SectionProps) {
             >
               <Show when={props.icon}>
                 <span style={{ display: "flex", "align-items": "center" }}>{props.icon}</span>
+              </Show>
+              <Show when={props.iconUrl}>
+                <img
+                  src={props.iconUrl}
+                  alt=""
+                  style={{ width: "1.25rem", height: "1.25rem", "object-fit": "contain" }}
+                />
               </Show>
               {props.title}
             </h2>

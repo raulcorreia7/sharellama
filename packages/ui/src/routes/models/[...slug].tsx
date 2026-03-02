@@ -1,7 +1,7 @@
 import { Title } from "@solidjs/meta";
 import { createResource, Show, For } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { ExternalLink, Download, Heart, Blocks } from "lucide-solid";
+import { ExternalLink, Download, Heart } from "lucide-solid";
 import { api } from "../../lib/api";
 import { Layout, Breadcrumbs, Section, EmptyState } from "../../components/layout";
 import { SubmissionCard } from "../../components/SubmissionCard";
@@ -97,9 +97,9 @@ export default function ModelDetail() {
             "margin-bottom": "1rem",
           }}
         >
-          <Show when={orgName()}>
+          <Show when={model() && model()!.data.orgAvatar}>
             <img
-              src={`https://huggingface.co/avatars/${orgName()}`}
+              src={model()!.data.orgAvatar!}
               alt={orgName()!}
               style={{
                 width: "2.5rem",
@@ -165,7 +165,11 @@ export default function ModelDetail() {
         <Show when={!model.loading && model()}>
           {(m) => (
             <>
-              <Section card title="HuggingFace" icon={<Blocks size={20} />}>
+              <Section
+                card
+                title="HuggingFace"
+                iconUrl="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
+              >
                 <a
                   href={`https://huggingface.co/${m().data.slug}`}
                   target="_blank"
