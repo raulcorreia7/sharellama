@@ -106,6 +106,175 @@ async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string)
   }
 }
 
+function parseYamlFrontmatter(frontmatter: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const lines = frontmatter.split("\n");
+
+  for (const line of lines) {
+    const match = line.match(/^(\s*)([\w-]+):\s*(.*)$/);
+    if (!match) continue;
+
+    const [, indent, key, valueStr] = match;
+    if (indent && indent.length > 0) continue;
+    if (!key) continue;
+
+    const parsedValue = valueStr?.trim() ?? "";
+    if (parsedValue === "true") result[key] = true;
+    else if (parsedValue === "false") result[key] = false;
+    else if (parsedValue === "null") result[key] = null;
+    else if (/^-?\d+$/.test(parsedValue)) result[key] = parseInt(parsedValue, 10);
+    else if (/^-?\d+\.\d+$/.test(parsedValue)) result[key] = parseFloat(parsedValue);
+    else if (parsedValue.startsWith("[") && parsedValue.endsWith("]")) {
+      const items = parsedValue
+        .slice(1, -1)
+        .split(",")
+        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+        .filter(Boolean);
+      result[key] = items;
+    } else if (parsedValue.startsWith('"') || parsedValue.startsWith("'")) {
+      result[key] = parsedValue.slice(1, -1);
+    } else {
+      result[key] = parsedValue;
+    }
+  }
+
+  return result;
+}
+
+function calculateMoEActiveParams(configData: Record<string, unknown>): string | undefined {
+  const numLocalExperts = configData.num_local_experts as number | undefined;
+  const numExperts = configData.num_experts as number | undefined;
+  const intermediateSize = configData.intermediate_size as number | undefined;
+  const hiddenSize = (configData.hidden_size as number | undefined) ?? 0;
+
+  const experts = numLocalExperts ?? numExperts;
+  if (!experts || typeof experts !== "number") return undefined;
+
+  const numExpertsPerTok = configData.num_experts_per_tok as number | undefined;
+  if (numExpertsPerTok && intermediateSize && hiddenSize) {
+    const activeExperts = Math.min(numExpertsPerTok, experts);
+    const activeIntermediate = Math.round((intermediateSize * activeExperts) / experts);
+    const activeParams = (activeIntermediate * activeExperts * hiddenSize) / 1e9;
+    return `${activeParams.toFixed(1)}B`;
+  }
+
+  return undefined;
+}
+
+async function fetchModelSpecsFromHF(slug: string): Promise<{
+  sourceType: "hf_readme";
+  sourceUrl: string;
+  architecture?: string;
+  parameterCount?: string;
+  activeParameters?: string;
+  layers?: number;
+  hiddenSize?: number;
+  attentionHeads?: number;
+  contextWindow?: number;
+  kvHeads?: number;
+  headDim?: number;
+  attentionType?: string;
+  multimodal?: boolean;
+  supportedModalities?: string[];
+} | null> {
+  try {
+    const readmeResponse = await fetch(`https://huggingface.co/${slug}/raw/main/README.md`, {
+      signal: AbortSignal.timeout(10000),
+    });
+
+    const readme = readmeResponse.ok ? await readmeResponse.text() : null;
+
+    let yamlData: Record<string, unknown> | null = null;
+    if (readme) {
+      const yamlMatch = readme.match(/^---\n([\s\S]*?)\n---/);
+      if (yamlMatch && yamlMatch[1]) {
+        yamlData = parseYamlFrontmatter(yamlMatch[1]);
+      }
+    }
+
+    const configResponse = await fetch(`https://huggingface.co/${slug}/raw/main/config.json`, {
+      signal: AbortSignal.timeout(5000),
+    });
+
+    let configData: Record<string, unknown> | null = null;
+    if (configResponse.ok) {
+      configData = await configResponse.json();
+    }
+
+    const specs = {
+      sourceType: "hf_readme" as const,
+      sourceUrl: `https://huggingface.co/${slug}`,
+      architecture: undefined as string | undefined,
+      parameterCount: undefined as string | undefined,
+      activeParameters: undefined as string | undefined,
+      layers: undefined as number | undefined,
+      hiddenSize: undefined as number | undefined,
+      attentionHeads: undefined as number | undefined,
+      contextWindow: undefined as number | undefined,
+      kvHeads: undefined as number | undefined,
+      headDim: undefined as number | undefined,
+      attentionType: undefined as string | undefined,
+      multimodal: undefined as boolean | undefined,
+      supportedModalities: undefined as string[] | undefined,
+    };
+
+    if (configData) {
+      specs.layers = configData.num_hidden_layers as number | undefined;
+      specs.hiddenSize = configData.hidden_size as number | undefined;
+      specs.attentionHeads = configData.num_attention_heads as number | undefined;
+      specs.contextWindow = configData.max_position_embeddings as number | undefined;
+      specs.kvHeads = configData.num_key_value_heads as number | undefined;
+      specs.headDim = configData.head_dim as number | undefined;
+
+      const architectures = configData.architectures as string[] | undefined;
+      specs.architecture = architectures?.[0] ?? "Unknown";
+
+      const vocabSize = configData.vocab_size as number | undefined;
+      if (vocabSize && specs.hiddenSize) {
+        specs.parameterCount = `${((vocabSize * specs.hiddenSize) / 1e9).toFixed(1)}B`;
+      }
+
+      if (configData.num_experts || configData.num_local_experts) {
+        specs.architecture = "MoE";
+        specs.activeParameters = calculateMoEActiveParams(configData);
+      }
+
+      const attentionImplementations = configData._attn_implementation_internal as
+        | string
+        | undefined;
+      if (attentionImplementations) {
+        specs.attentionType = attentionImplementations;
+      }
+
+      const multimodalConfig = configData.vision_config as Record<string, unknown> | undefined;
+      if (multimodalConfig) {
+        specs.multimodal = true;
+        specs.supportedModalities = ["text", "image"];
+      }
+    }
+
+    if (yamlData) {
+      const tags = yamlData.tags as string[] | undefined;
+      if (tags) {
+        const pipelineTag = tags.find((t) => t.includes("task:"));
+        if (pipelineTag && specs.architecture) {
+          specs.architecture = `${specs.architecture} (${pipelineTag})`;
+        }
+      }
+
+      const license = yamlData.license as string | undefined;
+      if (license && specs.architecture) {
+        specs.architecture = `${specs.architecture} [${license}]`;
+      }
+    }
+
+    return specs;
+  } catch (error) {
+    console.error(`Failed to fetch specs from HF for ${slug}:`, error);
+    return null;
+  }
+}
+
 const SUPPORTED_PIPELINES = [
   "text-generation",
   "text2text-generation",
@@ -468,7 +637,23 @@ app.get("/:slug", async (c) => {
 
     model = created;
 
-    c.executionCtx.waitUntil(fetchAndCacheHfMetadata(db, slug));
+    c.executionCtx.waitUntil(
+      (async () => {
+        await fetchAndCacheHfMetadata(db, slug);
+
+        const hfSpecs = await fetchModelSpecsFromHF(slug);
+        if (hfSpecs) {
+          await db
+            .insert(modelSpecs)
+            .values({
+              ...hfSpecs,
+              modelSlug: slug,
+              isPrimary: true,
+            })
+            .onConflictDoNothing();
+        }
+      })(),
+    );
   }
 
   const gpu = c.req.query("gpu");
