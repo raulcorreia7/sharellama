@@ -1574,6 +1574,12 @@ h6 {
   }
 }
 
+@media (min-width: 768px) {
+  .submit-grid--3col {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .submit-field {
   display: flex;
   flex-direction: column;
@@ -2006,6 +2012,22 @@ h6 {
   gap: 1rem;
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
+}
+
+.page-header--simple {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header--simple h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.page-header--simple p {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
 }
 
 .page-title {
@@ -3885,4 +3907,283 @@ h6 {
 
 [data-theme="light"] .ref-item:hover .ref-title {
   color: #ff4500;
+}
+
+/* ----------------------------------------
+   MODEL DETAIL HEADER
+   ---------------------------------------- */
+
+.model-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.model-org-avatar {
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.model-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.model-detail-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.model-detail-org {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ----------------------------------------
+   VRAM CARDS
+   ---------------------------------------- */
+
+.vram-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  border-left: 4px solid var(--color-accent);
+  transition: all var(--transition-fast);
+}
+
+.vram-card:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+}
+
+.vram-quant {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.vram-requirement {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.vram-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+/* ----------------------------------------
+   COMMAND BLOCKS
+   ---------------------------------------- */
+
+.command-block {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.command-block:hover {
+  border-color: var(--color-border-hover);
+}
+
+.command-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.command-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.command-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.command-copy-btn:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.command-code {
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background-color: var(--color-bg);
+  margin: 0;
+}
+
+/* ----------------------------------------
+   PRESET TABS
+   ---------------------------------------- */
+
+.preset-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.preset-tab-list {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 1rem;
+}
+
+.preset-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.preset-tab:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+}
+
+.preset-tab--active {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+  background-color: var(--color-accent-muted);
+}
+
+.preset-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preset-content {
+  padding-top: 0.5rem;
+}
+
+.preset-description {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.preset-params-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.preset-param {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.preset-param-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.preset-param-value {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ----------------------------------------
+   LOADING SKELETONS
+   ---------------------------------------- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton--text {
+  height: 1rem;
+  width: 100%;
+}
+
+.skeleton--title {
+  height: 2rem;
+  width: 60%;
+  margin-bottom: 1rem;
+}
+
+.skeleton--card {
+  height: 120px;
+  width: 100%;
 }

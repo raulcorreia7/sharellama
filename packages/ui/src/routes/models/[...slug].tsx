@@ -4,12 +4,12 @@ import { useParams } from "@solidjs/router";
 
 import { Download, ExternalLink, Heart } from "lucide-solid";
 
-import { Breadcrumbs, EmptyState, Layout, LoadingState, Section } from "../../components/layout";
-import { SpecsGrid } from "../../components/display/SpecsGrid";
-import { VramCard } from "../../components/display/VramCard";
-import { PresetTabs } from "../../components/display/PresetTabs";
 import { CommandBlock } from "../../components/display/CommandBlock";
 import { CommunityRefs } from "../../components/display/CommunityRefs";
+import { PresetTabs } from "../../components/display/PresetTabs";
+import { SpecsGrid } from "../../components/display/SpecsGrid";
+import { VramCard } from "../../components/display/VramCard";
+import { Breadcrumbs, EmptyState, Layout, LoadingState, Section } from "../../components/layout";
 import { SubmissionCard } from "../../components/SubmissionCard";
 import { api } from "../../lib/api";
 
@@ -50,6 +50,7 @@ export default function ModelDetail() {
   const isLoading = () => model.loading || !model();
   const hasError = () => !!model.error;
   const hasData = () => !isLoading() && !hasError() && model();
+  const specsLoading = () => specs.loading || !specs();
 
   const modelName = () => {
     const m = model();
@@ -182,73 +183,113 @@ export default function ModelDetail() {
 
           <Show when={primarySpec()}>
             <Section card title="Architecture">
-              <SpecsGrid
-                architecture={primarySpec()!.architecture}
-                parameterCount={primarySpec()!.parameterCount}
-                activeParameters={primarySpec()!.activeParameters}
-                layers={primarySpec()!.layers}
-                hiddenSize={primarySpec()!.hiddenSize}
-                attentionHeads={primarySpec()!.attentionHeads}
-                contextWindow={primarySpec()!.contextWindow}
-                attentionType={primarySpec()!.attentionType}
-                multimodal={primarySpec()!.multimodal}
-              />
+              <Show when={specsLoading()}>
+                <div class="specs-grid">
+                  <For each={Array(6)}>{() => <div class="skeleton" style="height: 80px" />}</For>
+                </div>
+              </Show>
+              <Show when={!specsLoading()}>
+                <SpecsGrid
+                  architecture={primarySpec()!.architecture}
+                  parameterCount={primarySpec()!.parameterCount}
+                  activeParameters={primarySpec()!.activeParameters}
+                  layers={primarySpec()!.layers}
+                  hiddenSize={primarySpec()!.hiddenSize}
+                  attentionHeads={primarySpec()!.attentionHeads}
+                  contextWindow={primarySpec()!.contextWindow}
+                  attentionType={primarySpec()!.attentionType}
+                  multimodal={primarySpec()!.multimodal}
+                />
+              </Show>
             </Section>
           </Show>
 
           <Show when={primarySpec()}>
             <Section card title="VRAM Requirements">
-              <div
-                style={{
-                  display: "grid",
-                  "grid-template-columns": "repeat(auto-fill, minmax(250px, 1fr))",
-                  gap: "1rem",
-                }}
-              >
-                <VramCard
-                  quant="Q4_K_M"
-                  vram={primarySpec()!.minVramQ4}
-                  recommendedGpu={primarySpec()!.recommendedGpu}
-                />
-                <VramCard quant="Q6_K" vram={primarySpec()!.minVramQ6} />
-                <VramCard quant="Q8_0" vram={primarySpec()!.minVramQ8} />
-              </div>
+              <Show when={specsLoading()}>
+                <div
+                  style={{
+                    display: "grid",
+                    "grid-template-columns": "repeat(auto-fill, minmax(250px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  <For each={Array(3)}>{() => <div class="skeleton" style="height: 120px" />}</For>
+                </div>
+              </Show>
+              <Show when={!specsLoading()}>
+                <div
+                  style={{
+                    display: "grid",
+                    "grid-template-columns": "repeat(auto-fill, minmax(250px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  <VramCard
+                    quant="Q4_K_M"
+                    vram={primarySpec()!.minVramQ4}
+                    recommendedGpu={primarySpec()!.recommendedGpu}
+                  />
+                  <VramCard quant="Q6_K" vram={primarySpec()!.minVramQ6} />
+                  <VramCard quant="Q8_0" vram={primarySpec()!.minVramQ8} />
+                </div>
+              </Show>
             </Section>
           </Show>
 
           <Show when={primarySpec()}>
             <Section card title="Running Commands">
-              <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
-                <CommandBlock engine="llama.cpp" command={primarySpec()!.llamaCppCommand} />
-                <Show when={primarySpec()!.vllmCommand}>
-                  <CommandBlock engine="vLLM" command={primarySpec()!.vllmCommand} />
-                </Show>
-                <Show when={primarySpec()!.ollamaModelfile}>
-                  <CommandBlock
-                    engine="Ollama"
-                    command={primarySpec()!.ollamaModelfile}
-                    modelfile
-                  />
-                </Show>
-              </div>
+              <Show when={specsLoading()}>
+                <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
+                  <div class="skeleton" style="height: 100px" />
+                  <div class="skeleton" style="height: 100px" />
+                </div>
+              </Show>
+              <Show when={!specsLoading()}>
+                <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
+                  <CommandBlock engine="llama.cpp" command={primarySpec()!.llamaCppCommand} />
+                  <Show when={primarySpec()!.vllmCommand}>
+                    <CommandBlock engine="vLLM" command={primarySpec()!.vllmCommand} />
+                  </Show>
+                  <Show when={primarySpec()!.ollamaModelfile}>
+                    <CommandBlock
+                      engine="Ollama"
+                      command={primarySpec()!.ollamaModelfile}
+                      modelfile
+                    />
+                  </Show>
+                </div>
+              </Show>
             </Section>
           </Show>
 
           <Show when={primarySpec()}>
             <Section card title="Generation Presets">
-              <PresetTabs
-                defaultParams={primarySpec()!.defaultParams}
-                thinkingModeParams={primarySpec()!.thinkingModeParams}
-              />
+              <Show when={specsLoading()}>
+                <div class="skeleton" style="height: 150px" />
+              </Show>
+              <Show when={!specsLoading()}>
+                <PresetTabs
+                  defaultParams={primarySpec()!.defaultParams}
+                  thinkingModeParams={primarySpec()!.thinkingModeParams}
+                />
+              </Show>
             </Section>
           </Show>
 
           <Show when={primarySpec()}>
             <Section card title="Community Discussions">
-              <CommunityRefs
-                redditPosts={primarySpec()!.redditPosts}
-                sourceUrl={primarySpec()!.sourceUrl}
-              />
+              <Show when={specsLoading()}>
+                <div style={{ display: "flex", "flex-direction": "column", gap: "0.75rem" }}>
+                  <For each={Array(2)}>{() => <div class="skeleton" style="height: 80px" />}</For>
+                </div>
+              </Show>
+              <Show when={!specsLoading()}>
+                <CommunityRefs
+                  redditPosts={primarySpec()!.redditPosts}
+                  sourceUrl={primarySpec()!.sourceUrl}
+                />
+              </Show>
             </Section>
           </Show>
 
