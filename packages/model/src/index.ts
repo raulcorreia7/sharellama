@@ -88,5 +88,6 @@ export interface ApiError {
 export * from "./config/index.js";
 export * from "./schemas/comment.js";
 export * from "./schemas/model.js";
+export { createModelSpecSchema, updateModelSpecSchema } from "./schemas/model.js";
 export * from "./schemas/submission.js";
 export * from "./schemas/vote.js";

@@ -40,11 +40,11 @@ pnpm db:up
 docker ps | grep sharellama
 ```
 
-### 4. Initialize Database
+### 4. Push Schema to Database
 
 ```bash
-# Create tables and schema
-pnpm db:setup
+# Apply Drizzle schema to database
+pnpm db:push
 ```
 
 ### 5. Start Development
@@ -85,17 +85,14 @@ pnpm db:up
 # Stop container
 pnpm db:down
 
-# Push schema changes (dev)
+# Push schema changes to DB
 pnpm db:push
 
-# Generate migration
+# Generate migration files
 pnpm db:generate
 
-# Reset database
-pnpm db:reset
-
-# View in browser
-pnpm dev:db
+# Open Drizzle Studio (DB viewer)
+pnpm db:studio
 ```
 
 ## Testing
@@ -103,20 +100,20 @@ pnpm dev:db
 ### Unit Tests
 
 ```bash
-# Run all unit tests (all packages)
+# Run all tests (all packages)
 pnpm test
 
 # Run API tests only
-pnpm test:api
+pnpm --filter @sharellama/api run test
 
 # Run specific test file
-pnpm --filter @sharellama/api test path/to/test.test.ts
+pnpm --filter @sharellama/api run test path/to/test.test.ts
 
-# Run with coverage
-pnpm --filter @sharellama/api test -- --coverage
+# Run with pattern match
+pnpm --filter @sharellama/api run test -t "test name pattern"
 
 # Run in watch mode
-pnpm --filter @sharellama/api test -- --watch
+pnpm --filter @sharellama/api run test:watch
 ```
 
 ### E2E Tests
@@ -141,7 +138,7 @@ npx playwright show-trace trace.zip
 **E2E Requirements:**
 
 1. Database running: `pnpm db:up`
-2. Database initialized: `pnpm db:setup`
+2. Schema pushed to database: `pnpm db:push`
 3. Dev servers running: `pnpm dev`
 
 ### Test Database

@@ -155,6 +155,52 @@ export const scheduledTasks = pgTable("scheduled_tasks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const modelSpecs = pgTable(
+  "model_specs",
+  {
+    modelSlug: varchar("model_slug", { length: 255 })
+      .references(() => models.slug)
+      .notNull(),
+    sourceType: varchar("source_type", { length: 50 }).notNull(),
+    sourceUrl: varchar("source_url", { length: 500 }),
+    architecture: varchar("architecture", { length: 100 }),
+    parameterCount: varchar("parameter_count", { length: 50 }),
+    activeParameters: varchar("active_parameters", { length: 50 }),
+    layers: integer("layers"),
+    hiddenSize: integer("hidden_size"),
+    attentionHeads: integer("attention_heads"),
+    kvHeads: integer("kv_heads"),
+    headDim: integer("head_dim"),
+    contextWindow: integer("context_window"),
+    attentionType: varchar("attention_type", { length: 100 }),
+    multimodal: boolean("multimodal"),
+    supportedModalities: jsonb("supported_modalities").$type<string[]>(),
+    minVramQ4: real("min_vram_q4"),
+    minVramQ6: real("min_vram_q6"),
+    minVramQ8: real("min_vram_q8"),
+    recommendedGpu: varchar("recommended_gpu", { length: 200 }),
+    defaultParams: jsonb("default_params").$type<Record<string, unknown>>(),
+    thinkingModeParams: jsonb("thinking_mode_params").$type<Record<string, unknown>>(),
+    redditPosts:
+      jsonb("reddit_posts").$type<
+        Array<{ title: string; url: string; upvotes?: number; date?: string }>
+      >(),
+    llamaCppCommand: text("llama_cpp_command"),
+    vllmCommand: text("vllm_command"),
+    ollamaModelfile: text("ollama_modelfile"),
+    submittedBy: varchar("submitted_by", { length: 64 }),
+    submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at"),
+    isVerified: boolean("is_verified").default(false),
+    isPrimary: boolean("is_primary").default(false),
+  },
+  (table) => ({
+    modelSlugIdx: index().on(table.modelSlug),
+    sourceTypeIdx: index().on(table.sourceType),
+    modelSlugPrimaryIdx: index().on(table.modelSlug, table.isPrimary),
+  }),
+);
+
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl);
   return drizzle(client, {
@@ -167,6 +213,7 @@ export function createDb(databaseUrl: string) {
       hfCache,
       scheduledTasks,
       orgAvatars,
+      modelSpecs,
     },
   });
 }

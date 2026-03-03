@@ -58,6 +58,7 @@ export default function SubmissionsList() {
   );
   const [page, setPage] = createSignal(1);
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = createSignal(false);
 
   const meta = useResourceWithDefault(() => api.getSubmissionsMeta(), DEFAULT_META);
 
@@ -135,8 +136,19 @@ export default function SubmissionsList() {
 
       <PageHeader title="Submissions" description="Community benchmarks and configurations" />
 
-      <div class="filter-toggle lg:hidden" style={{ "margin-bottom": "1rem" }}>
-        <Button type="button" onClick={() => setSidebarOpen(true)} variant="secondary" size="sm">
+      <div class="filter-toggle" style={{ "margin-bottom": "1rem" }}>
+        <Button
+          type="button"
+          onClick={() => {
+            if (window.innerWidth >= 1024) {
+              setDesktopSidebarCollapsed(!desktopSidebarCollapsed());
+            } else {
+              setSidebarOpen(true);
+            }
+          }}
+          variant="secondary"
+          size="sm"
+        >
           <Filter size={14} />
           Filters
           <Show when={activeFilterCount() > 0}>
@@ -152,6 +164,7 @@ export default function SubmissionsList() {
           meta={meta() ?? null}
           isOpen={sidebarOpen()}
           onClose={() => setSidebarOpen(false)}
+          collapsed={desktopSidebarCollapsed()}
         />
 
         <div class="submissions-content">

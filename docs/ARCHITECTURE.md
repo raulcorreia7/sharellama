@@ -188,7 +188,7 @@ Caches at edge via Cloudflare; reduces HF API load.
 | -------- | -------------------- | --------------------------- |
 | Frontend | SolidStart           | SSR/SSG framework           |
 |          | SolidJS              | Reactive UI                 |
-|          | Tailwind CSS         | Styling                     |
+|          | Custom CSS           | Styling                     |
 | API      | Hono                 | Web framework               |
 |          | Cloudflare Workers   | Serverless runtime          |
 |          | Zod                  | Validation                  |

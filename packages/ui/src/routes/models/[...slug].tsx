@@ -1,10 +1,15 @@
-import { createResource, For, Show } from "solid-js";
+import { createMemo, createResource, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { useParams } from "@solidjs/router";
 
 import { Download, ExternalLink, Heart } from "lucide-solid";
 
 import { Breadcrumbs, EmptyState, Layout, LoadingState, Section } from "../../components/layout";
+import { SpecsGrid } from "../../components/display/SpecsGrid";
+import { VramCard } from "../../components/display/VramCard";
+import { PresetTabs } from "../../components/display/PresetTabs";
+import { CommandBlock } from "../../components/display/CommandBlock";
+import { CommunityRefs } from "../../components/display/CommunityRefs";
 import { SubmissionCard } from "../../components/SubmissionCard";
 import { api } from "../../lib/api";
 
@@ -34,6 +39,13 @@ export default function ModelDetail() {
   });
   const model = modelResource[0];
   const { refetch } = modelResource[1];
+
+  const specsResource = createResource(slug, async (s) => {
+    const result = await api.getModelSpecs(s);
+    return result.data;
+  });
+  const specs = specsResource[0];
+  const primarySpec = createMemo(() => specs()?.find((s) => s.isPrimary) || specs()?.[0]);
 
   const isLoading = () => model.loading || !model();
   const hasError = () => !!model.error;
@@ -167,6 +179,78 @@ export default function ModelDetail() {
             </a>
             <p class="section-hint">View model details, files, and documentation on HuggingFace.</p>
           </Section>
+
+          <Show when={primarySpec()}>
+            <Section card title="Architecture">
+              <SpecsGrid
+                architecture={primarySpec()!.architecture}
+                parameterCount={primarySpec()!.parameterCount}
+                activeParameters={primarySpec()!.activeParameters}
+                layers={primarySpec()!.layers}
+                hiddenSize={primarySpec()!.hiddenSize}
+                attentionHeads={primarySpec()!.attentionHeads}
+                contextWindow={primarySpec()!.contextWindow}
+                attentionType={primarySpec()!.attentionType}
+                multimodal={primarySpec()!.multimodal}
+              />
+            </Section>
+          </Show>
+
+          <Show when={primarySpec()}>
+            <Section card title="VRAM Requirements">
+              <div
+                style={{
+                  display: "grid",
+                  "grid-template-columns": "repeat(auto-fill, minmax(250px, 1fr))",
+                  gap: "1rem",
+                }}
+              >
+                <VramCard
+                  quant="Q4_K_M"
+                  vram={primarySpec()!.minVramQ4}
+                  recommendedGpu={primarySpec()!.recommendedGpu}
+                />
+                <VramCard quant="Q6_K" vram={primarySpec()!.minVramQ6} />
+                <VramCard quant="Q8_0" vram={primarySpec()!.minVramQ8} />
+              </div>
+            </Section>
+          </Show>
+
+          <Show when={primarySpec()}>
+            <Section card title="Running Commands">
+              <div style={{ display: "flex", "flex-direction": "column", gap: "1rem" }}>
+                <CommandBlock engine="llama.cpp" command={primarySpec()!.llamaCppCommand} />
+                <Show when={primarySpec()!.vllmCommand}>
+                  <CommandBlock engine="vLLM" command={primarySpec()!.vllmCommand} />
+                </Show>
+                <Show when={primarySpec()!.ollamaModelfile}>
+                  <CommandBlock
+                    engine="Ollama"
+                    command={primarySpec()!.ollamaModelfile}
+                    modelfile
+                  />
+                </Show>
+              </div>
+            </Section>
+          </Show>
+
+          <Show when={primarySpec()}>
+            <Section card title="Generation Presets">
+              <PresetTabs
+                defaultParams={primarySpec()!.defaultParams}
+                thinkingModeParams={primarySpec()!.thinkingModeParams}
+              />
+            </Section>
+          </Show>
+
+          <Show when={primarySpec()}>
+            <Section card title="Community Discussions">
+              <CommunityRefs
+                redditPosts={primarySpec()!.redditPosts}
+                sourceUrl={primarySpec()!.sourceUrl}
+              />
+            </Section>
+          </Show>
 
           <Show when={model()!.configurations.length > 0}>
             <Section title="Configurations">

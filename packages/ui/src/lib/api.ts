@@ -9,7 +9,7 @@ import type {
   CreateCommentInput,
   VoteCommentInput,
 } from "@sharellama/model/schemas/comment";
-import type { Model } from "@sharellama/model/schemas/model";
+import type { Model, ModelSpec } from "@sharellama/model/schemas/model";
 import type { CreateVoteInput, VoteValue } from "@sharellama/model/schemas/vote";
 
 import { fetchWithRetry } from "./apiUtils";
@@ -314,6 +314,10 @@ class ApiClient {
 
   async getModel(slug: string): Promise<ModelDetailResponse> {
     return this.request<ModelDetailResponse>(`/models/${encodeURIComponent(slug)}`);
+  }
+
+  async getModelSpecs(slug: string): Promise<{ data: ModelSpec[] }> {
+    return this.request<{ data: ModelSpec[] }>(`/models/${encodeURIComponent(slug)}/specs`);
   }
 
   async populateModels(options?: { limit?: number; force?: boolean }): Promise<{

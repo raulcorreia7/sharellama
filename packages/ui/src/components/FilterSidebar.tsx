@@ -37,6 +37,7 @@ interface FilterSidebarProps {
   meta: FilterMeta | null;
   isOpen: boolean;
   onClose: () => void;
+  collapsed?: boolean;
 }
 
 const sortOptions = [
@@ -105,7 +106,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
         classList={{
           "filter-sidebar": true,
           "filter-sidebar--open": props.isOpen,
-          "filter-sidebar--closed": !props.isOpen,
+          "filter-sidebar--collapsed": props.collapsed,
         }}
         role="complementary"
         aria-label="Filters"
@@ -123,28 +124,24 @@ export function FilterSidebar(props: FilterSidebarProps) {
         </div>
 
         <div class="filter-content">
-          <div>
-            <label class="mb-2 block text-sm font-medium">Sort by</label>
-            <select
-              value={props.filters.sort}
-              onChange={handleSortChange}
-              class="select px-3 py-2 text-sm"
-            >
+          <div class="filter-group">
+            <label class="filter-label">Sort by</label>
+            <select value={props.filters.sort} onChange={handleSortChange} class="input w-full">
               <For each={sortOptions}>
                 {(opt) => <option value={opt.value}>{opt.label}</option>}
               </For>
             </select>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">Model</label>
-            <div class="max-h-48 space-y-2 overflow-y-auto rounded border border-[color:var(--border)] bg-[color:var(--surface)] p-2">
+          <div class="filter-group">
+            <label class="filter-label">Model</label>
+            <div class="filter-options-box">
               <Show when={!props.meta?.models.length}>
                 <p class="text-muted text-sm">No models available</p>
               </Show>
               <For each={props.meta?.models ?? []}>
                 {(model) => (
-                  <label class="flex cursor-pointer items-center gap-2 text-sm">
+                  <label class="filter-checkbox-label">
                     <input
                       type="checkbox"
                       checked={props.filters.model.includes(model.name)}
@@ -159,22 +156,22 @@ export function FilterSidebar(props: FilterSidebarProps) {
             </div>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">GPU</label>
+          <div class="filter-group">
+            <label class="filter-label">GPU</label>
             <input
               type="text"
               placeholder="Search GPUs..."
               value={gpuSearch()}
               onInput={(e) => setGpuSearch(e.currentTarget.value)}
-              class="input mb-2 px-2 py-1 text-sm"
+              class="input mb-2 w-full"
             />
-            <div class="max-h-48 space-y-2 overflow-y-auto rounded border border-[color:var(--border)] bg-[color:var(--surface)] p-2">
+            <div class="filter-options-box">
               <Show when={!filteredGpus().length}>
                 <p class="text-muted text-sm">No GPUs found</p>
               </Show>
               <For each={filteredGpus()}>
                 {(gpu) => (
-                  <label class="flex cursor-pointer items-center gap-2 text-sm">
+                  <label class="filter-checkbox-label">
                     <input
                       type="checkbox"
                       checked={props.filters.gpu.includes(gpu.name)}
@@ -189,26 +186,26 @@ export function FilterSidebar(props: FilterSidebarProps) {
             </div>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">CPU</label>
+          <div class="filter-group">
+            <label class="filter-label">CPU</label>
             <input
               type="text"
               placeholder="e.g., Ryzen 9"
               value={props.filters.cpu}
               onInput={handleCpuChange}
-              class="input px-3 py-2 text-sm"
+              class="input w-full"
             />
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">Quantization</label>
-            <div class="flex flex-wrap gap-2">
+          <div class="filter-group">
+            <label class="filter-label">Quantization</label>
+            <div class="filter-tags-wrap">
               <Show when={!props.meta?.quantizations.length}>
                 <p class="text-muted text-sm">No quantizations available</p>
               </Show>
               <For each={props.meta?.quantizations ?? []}>
                 {(q) => (
-                  <label class="flex cursor-pointer items-center gap-1 rounded border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1 text-sm has-[:checked]:border-[color:var(--brand)] has-[:checked]:bg-[#173764]">
+                  <label class="filter-tag">
                     <input
                       type="checkbox"
                       checked={props.filters.quantization.includes(q.name)}
@@ -222,15 +219,15 @@ export function FilterSidebar(props: FilterSidebarProps) {
             </div>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">Runtime</label>
-            <div class="flex flex-wrap gap-2">
+          <div class="filter-group">
+            <label class="filter-label">Runtime</label>
+            <div class="filter-tags-wrap">
               <Show when={!props.meta?.runtimes.length}>
                 <p class="text-muted text-sm">No runtimes available</p>
               </Show>
               <For each={props.meta?.runtimes ?? []}>
                 {(r) => (
-                  <label class="flex cursor-pointer items-center gap-1 rounded border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1 text-sm has-[:checked]:border-[color:var(--brand)] has-[:checked]:bg-[#173764]">
+                  <label class="filter-tag">
                     <input
                       type="checkbox"
                       checked={props.filters.runtime.includes(r.name)}
@@ -244,8 +241,8 @@ export function FilterSidebar(props: FilterSidebarProps) {
             </div>
           </div>
 
-          <div>
-            <label class="mb-2 block text-sm font-medium">Min tok/s</label>
+          <div class="filter-group">
+            <label class="filter-label">Min tok/s</label>
             <input
               type="number"
               min="0"
@@ -253,7 +250,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
               placeholder="Any"
               value={props.filters.minTps ?? ""}
               onChange={handleMinTpsChange}
-              class="input px-3 py-2 text-sm"
+              class="input w-full"
             />
           </div>
         </div>

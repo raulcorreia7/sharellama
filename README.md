@@ -131,7 +131,7 @@ core → (none)
 
 | Layer       | Technology                                |
 | ----------- | ----------------------------------------- |
-| Frontend    | SolidStart, SolidJS, Tailwind CSS         |
+| Frontend    | SolidStart, SolidJS, Custom CSS           |
 | API         | Hono, Cloudflare Workers                  |
 | Database    | PostgreSQL (Neon), Drizzle ORM            |
 | Validation  | Zod                                       |

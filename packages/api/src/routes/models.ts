@@ -1,7 +1,19 @@
 import { zValidator } from "@hono/zod-validator";
 
-import { hfCache, models, orgAvatars, scheduledTasks, submissions } from "@sharellama/database";
-import { createModelSchema, listModelsQuerySchema } from "@sharellama/model/schemas/model";
+import {
+  hfCache,
+  models,
+  modelSpecs,
+  orgAvatars,
+  scheduledTasks,
+  submissions,
+} from "@sharellama/database";
+import {
+  createModelSchema,
+  createModelSpecSchema,
+  listModelsQuerySchema,
+  updateModelSpecSchema,
+} from "@sharellama/model";
 
 import type { Env } from "../env";
 import { getConfig } from "../env";
@@ -530,6 +542,106 @@ app.get("/:slug", async (c) => {
       totalPages: Math.ceil(total / limit),
     },
   });
+});
+
+app.get("/:slug/specs", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const slug = c.req.param("slug");
+
+  const specs = await db
+    .select()
+    .from(modelSpecs)
+    .where(eq(modelSpecs.modelSlug, slug))
+    .orderBy(desc(modelSpecs.submittedAt));
+
+  return c.json({ data: specs });
+});
+
+app.post("/:slug/specs", zValidator("json", createModelSpecSchema), async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const slug = c.req.param("slug");
+  const data = c.req.valid("json");
+
+  const authorHash = c.req.header("X-Fingerprint") || "anonymous";
+
+  const existingCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(modelSpecs)
+    .where(eq(modelSpecs.modelSlug, slug))
+    .then((r) => Number(r[0]?.count ?? 0));
+
+  const [spec] = await db
+    .insert(modelSpecs)
+    .values({
+      ...data,
+      modelSlug: slug,
+      submittedBy: authorHash,
+      isPrimary: existingCount === 0 ? true : data.isPrimary,
+    })
+    .returning();
+
+  return c.json({ data: spec }, 201);
+});
+
+app.patch("/:slug/specs/:sourceType", zValidator("json", updateModelSpecSchema), async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const slug = c.req.param("slug");
+  const sourceType = c.req.param("sourceType");
+  const data = c.req.valid("json");
+
+  const existing = await db
+    .select()
+    .from(modelSpecs)
+    .where(and(eq(modelSpecs.modelSlug, slug), eq(modelSpecs.sourceType, sourceType)))
+    .limit(1);
+
+  if (!existing[0]) {
+    return c.json({ error: "Spec not found" }, 404);
+  }
+
+  const [updated] = await db
+    .update(modelSpecs)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(modelSpecs.modelSlug, slug), eq(modelSpecs.sourceType, sourceType)))
+    .returning();
+
+  return c.json({ data: updated });
+});
+
+app.get("/:slug/specs/primary", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const slug = c.req.param("slug");
+
+  const spec = await db
+    .select()
+    .from(modelSpecs)
+    .where(and(eq(modelSpecs.modelSlug, slug), eq(modelSpecs.isPrimary, true)))
+    .limit(1);
+
+  if (!spec[0]) {
+    return c.json({ error: "No primary spec found" }, 404);
+  }
+
+  return c.json({ data: spec[0] });
+});
+
+app.post("/:slug/specs/:sourceType/set-primary", async (c) => {
+  const db = getDb(getConfig(c.env).db.url);
+  const slug = c.req.param("slug");
+  const sourceType = c.req.param("sourceType");
+
+  await db.update(modelSpecs).set({ isPrimary: false }).where(eq(modelSpecs.modelSlug, slug));
+
+  const [updated] = await db
+    .update(modelSpecs)
+    .set({ isPrimary: true })
+    .where(and(eq(modelSpecs.modelSlug, slug), eq(modelSpecs.sourceType, sourceType)))
+    .returning();
+
+  return c.json({ data: updated });
 });
 
 export default app;
