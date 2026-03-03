@@ -59,13 +59,18 @@ List models with pagination.
 
 **Query Parameters:**
 
-| Parameter | Type   | Default     | Description                         |
-| --------- | ------ | ----------- | ----------------------------------- |
-| q         | string | -           | Search by model name                |
-| sort      | string | configCount | Sort field (configCount, createdAt) |
-| order     | string | desc        | Sort order (asc, desc)              |
-| page      | number | 1           | Page number                         |
-| limit     | number | 20          | Items per page (max 100)            |
+| Parameter    | Type   | Default     | Description                                                  |
+| ------------ | ------ | ----------- | ------------------------------------------------------------ |
+| q            | string | -           | Search by model name                                         |
+| architecture | string | -           | Filter by architecture type (e.g., "MoE", "Dense", "Hybrid") |
+| paramMin     | number | -           | Minimum parameter count (in billions, e.g., 7 for 7B)        |
+| paramMax     | number | -           | Maximum parameter count (in billions)                        |
+| contextMin   | number | -           | Minimum context window size                                  |
+| contextMax   | number | -           | Maximum context window size                                  |
+| sort         | string | configCount | Sort field (configCount, createdAt)                          |
+| order        | string | desc        | Sort order (asc, desc)                                       |
+| page         | number | 1           | Page number                                                  |
+| limit        | number | 20          | Items per page (max 100)                                     |
 
 **Response:**
 

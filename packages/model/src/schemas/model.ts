@@ -78,6 +78,11 @@ export interface ModelSpec extends CreateModelSpecInput {
 
 export const listModelsQuerySchema = z.object({
   q: z.string().max(200).optional(),
+  architecture: z.string().optional(),
+  paramMin: z.coerce.number().optional(),
+  paramMax: z.coerce.number().optional(),
+  contextMin: z.coerce.number().optional(),
+  contextMax: z.coerce.number().optional(),
   sort: z.enum(["configCount", "createdAt"]).default("configCount"),
   order: z.enum(["asc", "desc"]).default("desc"),
   page: z.coerce.number().int().positive().default(1),

@@ -20,7 +20,7 @@ import { getConfig } from "../env";
 import { getDb } from "../lib/db";
 import { getRunningTasks, runTaskNow } from "../lib/tasks";
 
-import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -31,6 +31,19 @@ const HF_API = "https://huggingface.co/api";
 const ORG_AVATAR_PLACEHOLDER = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg";
 
 const orgAvatarCache = new Map<string, string>();
+
+function parseParameterCount(paramStr: string | null | undefined): number | null {
+  if (!paramStr) return null;
+
+  const match = paramStr.match(/^([\d.]+)\s*(?:B|M)?$/i);
+  if (!match) return null;
+
+  const value = parseFloat(match[1]!);
+  if (isNaN(value)) return null;
+
+  const isBillions = paramStr.toLowerCase().includes("b");
+  return isBillions ? value * 1e9 : paramStr.toLowerCase().includes("m") ? value * 1e6 : value;
+}
 
 async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string): Promise<string> {
   const orgLower = org.toLowerCase();
@@ -353,12 +366,94 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
   const db = getDb(getConfig(c.env).db.url);
   const query = c.req.valid("query");
 
-  const { q, sort, order, page, limit } = query;
-  const offset = (page - 1) * limit;
+  const offset = (query.page - 1) * query.limit;
 
-  const conditions = [];
-  if (q) {
-    conditions.push(ilike(models.name, `%${q}%`));
+  const hasSpecFilters =
+    query.architecture ||
+    query.paramMin !== undefined ||
+    query.paramMax !== undefined ||
+    query.contextMin !== undefined ||
+    query.contextMax !== undefined;
+
+  let filteredModelSlugs: string[] | null = null;
+
+  if (hasSpecFilters) {
+    const allSpecs = await db
+      .select({
+        modelSlug: modelSpecs.modelSlug,
+        architecture: modelSpecs.architecture,
+        parameterCount: modelSpecs.parameterCount,
+        contextWindow: modelSpecs.contextWindow,
+      })
+      .from(modelSpecs)
+      .where(eq(modelSpecs.isPrimary, true));
+
+    filteredModelSlugs = [];
+
+    for (const spec of allSpecs) {
+      let passes = true;
+
+      if (query.architecture && spec.architecture !== query.architecture) {
+        passes = false;
+        continue;
+      }
+
+      if (query.paramMin !== undefined || query.paramMax !== undefined) {
+        const paramValue = parseParameterCount(spec.parameterCount);
+        if (paramValue === null) {
+          passes = false;
+          continue;
+        }
+        if (query.paramMin !== undefined && paramValue < query.paramMin) {
+          passes = false;
+          continue;
+        }
+        if (query.paramMax !== undefined && paramValue > query.paramMax) {
+          passes = false;
+          continue;
+        }
+      }
+
+      if (query.contextMin !== undefined || query.contextMax !== undefined) {
+        const contextValue = spec.contextWindow;
+        if (contextValue === null || contextValue === undefined) {
+          passes = false;
+          continue;
+        }
+        if (query.contextMin !== undefined && contextValue < query.contextMin) {
+          passes = false;
+          continue;
+        }
+        if (query.contextMax !== undefined && contextValue > query.contextMax) {
+          passes = false;
+          continue;
+        }
+      }
+
+      if (passes) {
+        filteredModelSlugs.push(spec.modelSlug);
+      }
+    }
+
+    if (filteredModelSlugs.length === 0) {
+      return c.json({
+        data: [],
+        pagination: {
+          page: query.page,
+          limit: query.limit,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    }
+  }
+
+  const conditions: any[] = [];
+  if (query.q) {
+    conditions.push(ilike(models.name, `%${query.q}%`));
+  }
+  if (filteredModelSlugs) {
+    conditions.push(inArray(models.slug, filteredModelSlugs));
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -366,9 +461,9 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
   const sortColumn = {
     configCount: models.configCount,
     createdAt: models.createdAt,
-  }[sort];
+  }[query.sort];
 
-  const orderByFn = order === "asc" ? asc : desc;
+  const orderByFn = query.order === "asc" ? asc : desc;
 
   const [results, countResult] = await Promise.all([
     db
@@ -376,7 +471,7 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
       .from(models)
       .where(whereClause)
       .orderBy(orderByFn(sortColumn))
-      .limit(limit)
+      .limit(query.limit)
       .offset(offset),
     db
       .select({ count: sql<number>`count(*)` })
@@ -410,10 +505,10 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
   return c.json({
     data: resultsWithMetadata,
     pagination: {
-      page,
-      limit,
+      page: query.page,
+      limit: query.limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / query.limit),
     },
   });
 });
