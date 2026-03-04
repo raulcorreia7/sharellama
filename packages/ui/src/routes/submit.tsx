@@ -2,7 +2,12 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
 import { A } from "@solidjs/router";
 
-import { type HFModelResult, type SubmissionInput, submissionSchema } from "@sharellama/model";
+import {
+  type CreateModelSpecInput,
+  type HFModelResult,
+  type SubmissionInput,
+  submissionSchema,
+} from "@sharellama/model";
 
 import { Button } from "../components/display";
 import { CopyButton, Input, Textarea } from "../components/forms";
@@ -117,6 +122,9 @@ export default function SubmitPage() {
   const [success, setSuccess] = createSignal<{ id: number; editToken: string } | null>(null);
   const [showAdvanced, setShowAdvanced] = createSignal(false);
   const [parsed, setParsed] = createSignal(false);
+
+  const [submitSpecs, setSubmitSpecs] = createSignal(false);
+  const [specFormData, setSpecFormData] = createSignal<Partial<CreateModelSpecInput>>({});
 
   const [modelSearch, setModelSearch] = createSignal("");
   const [modelResults, setModelResults] = createSignal<HFModelResult[]>([]);
@@ -235,6 +243,15 @@ export default function SubmitPage() {
     try {
       const fingerprint = await generateFingerprint();
       const response = await api.createSubmission(result.data, turnstileToken(), fingerprint);
+
+      if (submitSpecs() && result.data.modelSlug) {
+        try {
+          await api.submitModelSpec(result.data.modelSlug, specFormData());
+        } catch (e) {
+          console.error("Failed to submit specs:", e);
+        }
+      }
+
       setSuccess({ id: response.submission.id, editToken: response.editToken });
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : "Submission failed" });
@@ -441,6 +458,161 @@ export default function SubmitPage() {
                 </p>
               </Show>
             </div>
+          </Section>
+
+          <Section card title="Model Specifications (Optional)">
+            <p class="submit-hint">
+              Help others by sharing technical specs for this model. This information will be
+              displayed on the model page.
+            </p>
+
+            <div class="submit-field submit-field--full">
+              <label class="submit-label">
+                <input
+                  type="checkbox"
+                  checked={submitSpecs()}
+                  onChange={(e) => setSubmitSpecs(e.currentTarget.checked)}
+                  style="margin-right: 0.5rem;"
+                />
+                Submit model specifications
+              </label>
+            </div>
+
+            <Show when={submitSpecs()}>
+              <div class="submit-grid submit-grid--3col">
+                <div class="submit-field">
+                  <label class="submit-label">Architecture</label>
+                  <select
+                    class="input"
+                    value={specFormData().architecture || ""}
+                    onChange={(e) =>
+                      setSpecFormData((prev) => ({ ...prev, architecture: e.currentTarget.value }))
+                    }
+                  >
+                    <option value="">Select...</option>
+                    <option value="Dense">Dense</option>
+                    <option value="MoE">Mixture of Experts (MoE)</option>
+                    <option value="Hybrid">Hybrid Attention</option>
+                  </select>
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Parameter Count</label>
+                  <Input
+                    placeholder="e.g., 35B, 7B"
+                    value={specFormData().parameterCount || ""}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        parameterCount: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Active Parameters</label>
+                  <Input
+                    placeholder="e.g., 3.5B (for MoE)"
+                    value={specFormData().activeParameters || ""}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        activeParameters: e.currentTarget.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Layers</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 32"
+                    value={String(specFormData().layers || "")}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        layers: Number(e.currentTarget.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Context Window</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 262144 (256K)"
+                    value={String(specFormData().contextWindow || "")}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        contextWindow: Number(e.currentTarget.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Attention Type</label>
+                  <Input
+                    placeholder="e.g., Hybrid Gated DeltaNet"
+                    value={specFormData().attentionType || ""}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({ ...prev, attentionType: e.currentTarget.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div class="submit-grid submit-grid--3col">
+                <div class="submit-field">
+                  <label class="submit-label">Min VRAM (Q4)</label>
+                  <Input
+                    type="number"
+                    placeholder="GB"
+                    value={String(specFormData().minVramQ4 || "")}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        minVramQ4: Number(e.currentTarget.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Min VRAM (Q6)</label>
+                  <Input
+                    type="number"
+                    placeholder="GB"
+                    value={String(specFormData().minVramQ6 || "")}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        minVramQ6: Number(e.currentTarget.value),
+                      }))
+                    }
+                  />
+                </div>
+
+                <div class="submit-field">
+                  <label class="submit-label">Min VRAM (Q8)</label>
+                  <Input
+                    type="number"
+                    placeholder="GB"
+                    value={String(specFormData().minVramQ8 || "")}
+                    onInput={(e) =>
+                      setSpecFormData((prev) => ({
+                        ...prev,
+                        minVramQ8: Number(e.currentTarget.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </Show>
           </Section>
 
           <Section card title="Quick Info">

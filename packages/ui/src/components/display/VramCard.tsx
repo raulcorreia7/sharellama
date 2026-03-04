@@ -18,7 +18,7 @@
  */
 import { JSX, splitProps } from "solid-js";
 
-import { Cpu,Monitor } from "lucide-solid";
+import { Cpu, Monitor } from "lucide-solid";
 
 export interface VramCardProps extends JSX.HTMLAttributes<HTMLDivElement> {
   /** Quantization level (e.g., "Q4_K_M", "Q6_K", "Q8_0") */

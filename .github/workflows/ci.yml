@@ -38,6 +38,52 @@ jobs:
       - run: pnpm build
       - run: pnpm test
 
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Run API/UI smoke checks
+        run: |
+          set -euo pipefail
+
+          pnpm --filter @sharellama/api run dev >/tmp/sharellama-api-dev.log 2>&1 &
+          API_PID=$!
+          pnpm --filter @sharellama/ui run dev >/tmp/sharellama-ui-dev.log 2>&1 &
+          UI_PID=$!
+
+          cleanup() {
+            kill "$API_PID" "$UI_PID" >/dev/null 2>&1 || true
+            wait "$API_PID" >/dev/null 2>&1 || true
+            wait "$UI_PID" >/dev/null 2>&1 || true
+            docker compose down --remove-orphans >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for i in {1..90}; do
+            if curl -fsS "http://localhost:8787/health" >/dev/null 2>&1 && curl -fsS "http://localhost:3000/" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+            if [ "$i" -eq 90 ]; then
+              echo "Timed out waiting for local API/UI dev servers"
+              echo "---- API LOG ----"
+              cat /tmp/sharellama-api-dev.log || true
+              echo "---- UI LOG ----"
+              cat /tmp/sharellama-ui-dev.log || true
+              exit 1
+            fi
+          done
+
+          pnpm smoke
+
   e2e:
     runs-on: ubuntu-latest
     steps:

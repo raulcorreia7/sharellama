@@ -1,4 +1,5 @@
 import { getDb } from "./lib/db";
+import { logError, logInfo, logWarn } from "./lib/logging";
 import { checkAndRunTasks } from "./lib/tasks";
 import { rateLimit } from "./middleware/rateLimit";
 import { verifyTurnstile } from "./middleware/turnstile";
@@ -12,11 +13,36 @@ import { getConfig } from "./env";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("*", logger());
+app.use("*", async (c, next) => {
+  const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+  const startTime = performance.now();
+
+  c.header("X-Request-Id", requestId);
+
+  try {
+    await next();
+  } finally {
+    const status = c.res.status;
+    const context = {
+      requestId,
+      method: c.req.method,
+      path: c.req.path,
+      status,
+      durationMs: Number((performance.now() - startTime).toFixed(2)),
+    };
+
+    if (status >= 500) {
+      logError("http.request", context);
+    } else if (status >= 400) {
+      logWarn("http.request", context);
+    } else {
+      logInfo("http.request", context);
+    }
+  }
+});
 app.use(
   "*",
   cors({
@@ -38,11 +64,19 @@ app.use("*", async (c, next) => {
 });
 
 app.onError((err, c) => {
-  console.error("Error:", err);
+  const requestId = c.res.headers.get("X-Request-Id") ?? c.req.header("x-request-id") ?? "unknown";
+  logError("Unhandled API error", {
+    requestId,
+    method: c.req.method,
+    path: c.req.path,
+    error: err,
+  });
+
   return c.json(
     {
       error: "Internal Server Error",
       message: err.message,
+      requestId,
     },
     500,
   );

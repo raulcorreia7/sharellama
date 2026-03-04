@@ -4,6 +4,7 @@ import { A } from "@solidjs/router";
 import type { Submission } from "@sharellama/model";
 
 import { generateFingerprint } from "../../lib/fingerprint";
+import { markModelNavigationTransition } from "../../lib/modelNavigation";
 import { VoteButtons } from "./VoteButtons";
 
 interface SubmissionCardProps {
@@ -45,7 +46,11 @@ export function SubmissionCard(props: SubmissionCardProps) {
       </div>
 
       <p class="text-muted mb-3 text-sm">
-        <A href={`/models/${s().modelSlug}`} class="font-medium hover:underline">
+        <A
+          href={`/models/${s().modelSlug}`}
+          class="font-medium hover:underline"
+          onClick={markModelNavigationTransition}
+        >
           {s().modelSlug.split("/").pop()}
         </A>
         {s().quantization && (

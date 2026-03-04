@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 
-import { ArrowUp,ExternalLink, MessageSquare } from "lucide-solid";
+import { ArrowUp, ExternalLink, MessageSquare } from "lucide-solid";
 
 export interface RedditPost {
   title: string;

@@ -20,7 +20,9 @@
  * ```
  */
 import { Show } from "solid-js";
+import { A } from "@solidjs/router";
 
+import { markModelNavigationTransition } from "../../lib/modelNavigation";
 import { ChevronRight, Download, Heart, LayoutGrid } from "../icons";
 
 export interface ModelCardProps {
@@ -46,7 +48,7 @@ export function ModelCard(props: ModelCardProps) {
   const href = () => props.href ?? `/models/${props.slug}`;
 
   return (
-    <a href={href()} class="model-card">
+    <A href={href()} class="model-card" onClick={markModelNavigationTransition}>
       <div class="model-card-header">
         <Show when={props.orgAvatar}>
           <img
@@ -90,6 +92,6 @@ export function ModelCard(props: ModelCardProps) {
 
       {/* Arrow indicator - appears on hover */}
       <ChevronRight size={16} class="card-arrow" />
-    </a>
+    </A>
   );
 }

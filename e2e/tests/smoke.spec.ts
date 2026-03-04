@@ -39,6 +39,24 @@ test.describe("Models Page", () => {
       await expect(page.locator("text=No models")).toBeVisible();
     }
   });
+
+  test("should show loading transition when opening a model", async ({ page }) => {
+    await page.goto("/models");
+
+    const cards = page.locator(".model-card");
+    const cardCount = await cards.count();
+    test.skip(cardCount === 0, "No models available to validate model transition loading state.");
+
+    const firstCard = cards.first();
+    await expect(firstCard).toBeVisible();
+
+    const navOverlay = page.locator(".global-nav-loading-overlay");
+    await firstCard.click();
+
+    await expect(navOverlay).toBeVisible({ timeout: 1500 });
+    await expect(page).toHaveURL(/\/models\/.+/);
+    await expect(page.locator(".model-detail-title")).toBeVisible();
+  });
 });
 
 test.describe("Submissions Page", () => {

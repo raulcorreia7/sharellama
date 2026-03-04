@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from "child_process";
+import { execSync, spawn, spawnSync } from "child_process";
 import { config } from "dotenv";
 import { existsSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
@@ -9,6 +9,84 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "..", ".env") });
 
 const port = process.env.SERVER_PORT ?? "8787";
+const rootDir = resolve(__dirname, "..", "..", "..");
+
+function runRootCommand(command, args, label) {
+  console.log(`[dev] ${label}...`);
+  const result = spawnSync(command, args, {
+    cwd: rootDir,
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+}
+
+function releasePortIfBusy(portToRelease) {
+  const allowedProcessPatterns = [/workerd/i, /wrangler/i, /node.*scripts\/dev\.mjs/i];
+
+  try {
+    const output = execSync(`lsof -tiTCP:${portToRelease} -sTCP:LISTEN`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+
+    if (!output) {
+      return;
+    }
+
+    const pids = output
+      .split("\n")
+      .map((value) => Number.parseInt(value, 10))
+      .filter((pid) => Number.isInteger(pid) && pid !== process.pid);
+
+    if (pids.length === 0) {
+      return;
+    }
+
+    console.log(`[dev] Releasing port ${portToRelease} from process(es): ${pids.join(", ")}`);
+    for (const pid of pids) {
+      try {
+        const command = execSync(`ps -p ${pid} -o args=`, {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        }).trim();
+
+        if (!allowedProcessPatterns.some((pattern) => pattern.test(command))) {
+          console.error(
+            `[dev] Port ${portToRelease} is in use by non-dev process (${pid}): ${command}`,
+          );
+          process.exit(1);
+        }
+
+        process.kill(pid, "SIGTERM");
+      } catch {
+        // Ignore failures (already exited / permissions).
+      }
+    }
+
+    // Wait briefly for process teardown before starting wrangler.
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const stillListening = spawnSync(
+        "bash",
+        ["-lc", `lsof -tiTCP:${portToRelease} -sTCP:LISTEN >/dev/null`],
+        { stdio: "ignore" },
+      );
+      if (stillListening.status !== 0) {
+        return;
+      }
+      spawnSync("bash", ["-lc", "sleep 0.25"], { stdio: "ignore" });
+    }
+  } catch {
+    // No listener on this port or lsof unavailable.
+  }
+}
+
+runRootCommand("pnpm", ["db:up"], "Ensuring database is running");
+runRootCommand("pnpm", ["db:push"], "Applying database schema");
+releasePortIfBusy(port);
 
 const devVarsContent = [
   `SERVER_PORT=${port}`,

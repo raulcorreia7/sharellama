@@ -1,6 +1,8 @@
 import type { Db } from "@sharellama/database";
 import { models, scheduledTasks } from "@sharellama/database";
 
+import { logError, logInfo, logWarn } from "./logging";
+
 import { eq } from "drizzle-orm";
 
 const HF_API = "https://huggingface.co/api";
@@ -136,7 +138,7 @@ export async function checkAndRunTasks(
 
       const handler = taskRegistry.get(task.name);
       if (!handler) {
-        console.warn(`No handler registered for task: ${task.name}`);
+        logWarn("No handler registered for task", { taskName: task.name });
         continue;
       }
 
@@ -158,13 +160,13 @@ export async function checkAndRunTasks(
             .where(eq(scheduledTasks.name, task.name));
 
           if (result.success) {
-            console.log(`Task ${task.name} completed:`, result.stats);
+            logInfo("Task completed", { taskName: task.name, stats: result.stats });
           } else {
-            console.error(`Task ${task.name} failed:`, result.error);
+            logError("Task failed", { taskName: task.name, error: result.error });
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
-          console.error(`Task ${task.name} threw error:`, message);
+          logError("Task threw error", { taskName: task.name, error: message });
 
           await db
             .update(scheduledTasks)
@@ -177,12 +179,12 @@ export async function checkAndRunTasks(
           runningTasks.delete(task.name);
         }
       })().catch((err) => {
-        console.error(`Unhandled error in task ${task.name}:`, err);
+        logError("Unhandled error in background task", { taskName: task.name, error: err });
         runningTasks.delete(task.name);
       });
     }
   } catch (error) {
-    console.error("Error checking tasks:", error);
+    logError("Error checking scheduled tasks", { error });
   }
 }
 

@@ -1,6 +1,6 @@
-import { createMemo, createResource, For, Show } from "solid-js";
+import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { useParams } from "@solidjs/router";
+import { Navigate, useLocation, useParams } from "@solidjs/router";
 
 import { Download, ExternalLink, Heart } from "lucide-solid";
 
@@ -12,6 +12,10 @@ import { VramCard } from "../../components/display/VramCard";
 import { Breadcrumbs, EmptyState, Layout, LoadingState, Section } from "../../components/layout";
 import { SubmissionCard } from "../../components/SubmissionCard";
 import { api } from "../../lib/api";
+import {
+  clearModelNavigationTransition,
+  consumeModelNavigationTransition,
+} from "../../lib/modelNavigation";
 
 function formatNumber(num: number): string {
   if (num >= 1_000_000) {
@@ -24,13 +28,62 @@ function formatNumber(num: number): string {
 }
 
 export default function ModelDetail() {
+  const MODEL_NAVIGATION_SPINNER_MS = 320;
   const params = useParams();
+  const location = useLocation();
+  const [isNavigationTransitioning, setIsNavigationTransitioning] = createSignal(false);
+  const legacySubmitSpecSlug = () => {
+    const pathname = decodeURIComponent(location.pathname);
+    const prefix = "/models/";
+    const suffix = "/submit-spec";
+    if (!pathname.startsWith(prefix) || !pathname.endsWith(suffix)) {
+      return null;
+    }
+    const slugValue = pathname.slice(prefix.length, -suffix.length);
+    return slugValue || null;
+  };
+
+  onMount(() => {
+    let transitionTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    const shouldShowTransition = consumeModelNavigationTransition();
+    if (shouldShowTransition) {
+      setIsNavigationTransitioning(true);
+      transitionTimeout = setTimeout(() => {
+        setIsNavigationTransitioning(false);
+        clearModelNavigationTransition();
+      }, MODEL_NAVIGATION_SPINNER_MS);
+    } else {
+      clearModelNavigationTransition();
+    }
+
+    onCleanup(() => {
+      if (transitionTimeout) {
+        clearTimeout(transitionTimeout);
+      }
+    });
+  });
+
   const slug = () => {
     const slugParam = params.slug;
     if (Array.isArray(slugParam)) {
       return slugParam.join("/");
     }
-    return slugParam ?? "";
+    if (typeof slugParam === "string" && slugParam.length > 0) {
+      return slugParam;
+    }
+
+    const pathname = decodeURIComponent(location.pathname);
+    if (!pathname.startsWith("/models/")) {
+      return "";
+    }
+
+    const modelPath = pathname.slice("/models/".length);
+    if (!modelPath || modelPath === "models") {
+      return "";
+    }
+
+    return modelPath;
   };
 
   const modelResource = createResource(slug, async (s) => {
@@ -47,10 +100,19 @@ export default function ModelDetail() {
   const specs = specsResource[0];
   const primarySpec = createMemo(() => specs()?.find((s) => s.isPrimary) || specs()?.[0]);
 
-  const isLoading = () => model.loading || !model();
-  const hasError = () => !!model.error;
-  const hasData = () => !isLoading() && !hasError() && model();
-  const specsLoading = () => specs.loading || !specs();
+  const isModelForCurrentSlug = () => {
+    const modelData = model();
+    if (!modelData) {
+      return false;
+    }
+    return modelData.data.slug === slug();
+  };
+
+  const hasError = () => !!model.error && !model.loading && !isModelForCurrentSlug();
+  const isLoading = () =>
+    isNavigationTransitioning() || (!hasError() && (model.loading || !isModelForCurrentSlug()));
+  const hasData = () => !isLoading() && !hasError() && isModelForCurrentSlug();
+  const specsLoading = () => !specs.error && (specs.loading || !specs());
 
   const modelName = () => {
     const m = model();
@@ -69,13 +131,17 @@ export default function ModelDetail() {
     return `ShareLlama - ${name}`;
   };
 
+  if (legacySubmitSpecSlug()) {
+    return <Navigate href={`/models/submit-spec/${legacySubmitSpecSlug()!}`} />;
+  }
+
   return (
     <Layout>
       <Title>{pageTitle()}</Title>
 
       <Show when={isLoading()}>
         <div class="page-loading-overlay">
-          <LoadingState message="Loading model information..." />
+          <LoadingState message="Loading model details..." graphic />
         </div>
       </Show>
 

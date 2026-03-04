@@ -17,7 +17,7 @@ export { PresetTabs } from "./PresetTabs";
 export type { SkeletonProps } from "./Skeleton";
 export { Skeleton } from "./Skeleton";
 export type { SpecsGridProps } from "./SpecsGrid";
-export { formatContext,SpecsGrid } from "./SpecsGrid";
+export { formatContext, SpecsGrid } from "./SpecsGrid";
 export type { StatTagProps } from "./StatTag";
 export { StatTag } from "./StatTag";
 export type { TagProps } from "./Tag";

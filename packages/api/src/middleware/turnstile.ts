@@ -1,4 +1,5 @@
 import { type Env, getConfig } from "../env";
+import { logError } from "../lib/logging";
 
 import type { Context, MiddlewareHandler } from "hono";
 
@@ -49,7 +50,7 @@ export function verifyTurnstile(): MiddlewareHandler<{ Bindings: Env }> {
     const config = getConfig(c.env);
     const secret = config.auth.turnstileSecret;
     if (!secret) {
-      console.error("AUTH_TURNSTILE_SECRET_KEY not configured");
+      logError("Turnstile secret is not configured");
       return c.json({ error: "Turnstile not configured", code: "TURNSTILE_CONFIG_ERROR" }, 500);
     }
 

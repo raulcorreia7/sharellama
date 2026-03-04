@@ -1,5 +1,8 @@
 import type {
+  CreateModelSpecInput,
   HFModelResult,
+  Model,
+  ModelSpec,
   Submission,
   SubmissionInput,
   SubmissionUpdate,
@@ -9,7 +12,6 @@ import type {
   CreateCommentInput,
   VoteCommentInput,
 } from "@sharellama/model/schemas/comment";
-import type { Model, ModelSpec } from "@sharellama/model/schemas/model";
 import type { CreateVoteInput, VoteValue } from "@sharellama/model/schemas/vote";
 
 import { fetchWithRetry } from "./apiUtils";
@@ -318,6 +320,16 @@ class ApiClient {
 
   async getModelSpecs(slug: string): Promise<{ data: ModelSpec[] }> {
     return this.request<{ data: ModelSpec[] }>(`/models/${encodeURIComponent(slug)}/specs`);
+  }
+
+  async submitModelSpec(
+    slug: string,
+    data: Partial<CreateModelSpecInput>,
+  ): Promise<{ data: ModelSpec }> {
+    return this.request<{ data: ModelSpec }>(`/models/${encodeURIComponent(slug)}/specs`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   async populateModels(options?: { limit?: number; force?: boolean }): Promise<{

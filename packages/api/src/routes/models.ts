@@ -18,17 +18,17 @@ import {
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
+import { extractAvatarFromHfHtml, HF_AVATAR_PLACEHOLDER } from "../lib/huggingfaceAvatar";
+import { logError } from "../lib/logging";
 import { getRunningTasks, runTaskNow } from "../lib/tasks";
 
-import { and, asc, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, type SQL, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
 const app = new Hono<{ Bindings: Env }>();
 
 const HF_API = "https://huggingface.co/api";
-
-const ORG_AVATAR_PLACEHOLDER = "https://huggingface.co/front/assets/huggingface_logo-noborder.svg";
 
 const orgAvatarCache = new Map<string, string>();
 
@@ -68,17 +68,11 @@ async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string)
 
     if (response.ok) {
       const html = await response.text();
-      const match = html.match(
-        /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
-      );
-
-      if (match && match[1]) {
-        avatarUrl = match[1];
-      }
+      avatarUrl = extractAvatarFromHfHtml(html) ?? null;
     }
 
     if (!avatarUrl) {
-      avatarUrl = ORG_AVATAR_PLACEHOLDER;
+      avatarUrl = HF_AVATAR_PLACEHOLDER;
     }
 
     await db
@@ -103,19 +97,19 @@ async function fetchAndCacheOrgAvatar(db: ReturnType<typeof getDb>, org: string)
       .insert(orgAvatars)
       .values({
         org: orgLower,
-        avatarUrl: ORG_AVATAR_PLACEHOLDER,
+        avatarUrl: HF_AVATAR_PLACEHOLDER,
         fetchedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: orgAvatars.org,
         set: {
-          avatarUrl: ORG_AVATAR_PLACEHOLDER,
+          avatarUrl: HF_AVATAR_PLACEHOLDER,
           fetchedAt: new Date(),
         },
       });
 
-    orgAvatarCache.set(orgLower, ORG_AVATAR_PLACEHOLDER);
-    return ORG_AVATAR_PLACEHOLDER;
+    orgAvatarCache.set(orgLower, HF_AVATAR_PLACEHOLDER);
+    return HF_AVATAR_PLACEHOLDER;
   }
 }
 
@@ -283,7 +277,7 @@ async function fetchModelSpecsFromHF(slug: string): Promise<{
 
     return specs;
   } catch (error) {
-    console.error(`Failed to fetch specs from HF for ${slug}:`, error);
+    logError("Failed to fetch model specs from HF", { slug, error });
     return null;
   }
 }
@@ -331,7 +325,7 @@ async function fetchAndCacheHfMetadata(db: ReturnType<typeof getDb>, slug: strin
     const hfData = await fetchWithTimeout<HFModel>(`${HF_API}/models/${slug}`, 10000);
 
     if (!hfData) {
-      console.error(`Failed to fetch HF metadata for ${slug}`);
+      logError("Failed to fetch HF metadata", { slug });
       return;
     }
 
@@ -358,7 +352,7 @@ async function fetchAndCacheHfMetadata(db: ReturnType<typeof getDb>, slug: strin
       await fetchAndCacheOrgAvatar(db, org);
     }
   } catch (error) {
-    console.error(`Background metadata fetch failed for ${slug}:`, error);
+    logError("Background metadata fetch failed", { slug, error });
   }
 }
 
@@ -391,25 +385,19 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
     filteredModelSlugs = [];
 
     for (const spec of allSpecs) {
-      let passes = true;
-
       if (query.architecture && spec.architecture !== query.architecture) {
-        passes = false;
         continue;
       }
 
       if (query.paramMin !== undefined || query.paramMax !== undefined) {
         const paramValue = parseParameterCount(spec.parameterCount);
         if (paramValue === null) {
-          passes = false;
           continue;
         }
         if (query.paramMin !== undefined && paramValue < query.paramMin) {
-          passes = false;
           continue;
         }
         if (query.paramMax !== undefined && paramValue > query.paramMax) {
-          passes = false;
           continue;
         }
       }
@@ -417,22 +405,17 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
       if (query.contextMin !== undefined || query.contextMax !== undefined) {
         const contextValue = spec.contextWindow;
         if (contextValue === null || contextValue === undefined) {
-          passes = false;
           continue;
         }
         if (query.contextMin !== undefined && contextValue < query.contextMin) {
-          passes = false;
           continue;
         }
         if (query.contextMax !== undefined && contextValue > query.contextMax) {
-          passes = false;
           continue;
         }
       }
 
-      if (passes) {
-        filteredModelSlugs.push(spec.modelSlug);
-      }
+      filteredModelSlugs.push(spec.modelSlug);
     }
 
     if (filteredModelSlugs.length === 0) {
@@ -448,7 +431,7 @@ app.get("/", zValidator("query", listModelsQuerySchema), async (c) => {
     }
   }
 
-  const conditions: any[] = [];
+  const conditions: SQL[] = [];
   if (query.q) {
     conditions.push(ilike(models.name, `%${query.q}%`));
   }

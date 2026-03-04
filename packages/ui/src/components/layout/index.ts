@@ -1,4 +1,4 @@
-export type { BreadcrumbItem,BreadcrumbsProps } from "./Breadcrumbs";
+export type { BreadcrumbItem, BreadcrumbsProps } from "./Breadcrumbs";
 export { Breadcrumbs } from "./Breadcrumbs";
 export type { EmptyStateProps } from "./EmptyState";
 export { EmptyState } from "./EmptyState";
@@ -9,10 +9,10 @@ export { HeroMesh } from "./HeroMesh";
 export type { LayoutProps } from "./Layout";
 export { Layout } from "./Layout";
 export { LoadingState } from "./LoadingState";
-export type { NavCTA,NavigationProps, NavItem } from "./Navigation";
+export type { NavCTA, NavigationProps, NavItem } from "./Navigation";
 export { Navigation } from "./Navigation";
 export { Page } from "./Page";
-export type { PageFooterAction,PageFooterProps } from "./PageFooter";
+export type { PageFooterAction, PageFooterProps } from "./PageFooter";
 export { PageFooter } from "./PageFooter";
 export type { PageHeaderProps } from "./PageHeader";
 export { PageHeader } from "./PageHeader";

@@ -1,6 +1,6 @@
-import type { SubmissionInput } from "@sharellama/model";
+import type { CreateModelSpecInput, SubmissionInput } from "@sharellama/model";
 
-type ParsedCommand = Partial<SubmissionInput>;
+type ParsedCommand = Partial<SubmissionInput> & Partial<CreateModelSpecInput>;
 
 interface FlagDef {
   names: string[];
@@ -191,6 +191,25 @@ export function parseLlamaCppCommand(command: string): ParsedCommand {
     if (!result.quantization) {
       result.quantization = extractQuantization(baseName);
     }
+
+    const modelSize = extractModelSizeFromPath(baseName);
+    const quantMatch = result.quantization?.match(/Q(\d+)/);
+    if (modelSize && quantMatch?.[1]) {
+      result.minVramQ4 = estimateVram(modelSize, quantMatch[1]);
+    }
+
+    if (!result.title) {
+      result.title = `${baseName} Configuration`;
+    }
+  }
+
+  if (command.includes("--flash-attn")) {
+    result.attentionType = "Flash Attention";
+  }
+
+  const gpuLayersMatch = command.match(/(?:-ngl|--n-gpu-layers|--gpu-layers)\s+(\d+)/);
+  if (gpuLayersMatch && gpuLayersMatch[1] === "999") {
+    result.vramGb = undefined;
   }
 
   return result as ParsedCommand;
@@ -252,5 +271,25 @@ function findFlagValue(tokens: string[], flagName: string): string | undefined {
     }
   }
 
+  return undefined;
+}
+
+function estimateVram(modelSizeGb: number, quantLevel: string): number {
+  const quantMultipliers: Record<string, number> = {
+    "2": 0.7,
+    "3": 0.8,
+    "4": 1.0,
+    "5": 1.3,
+    "6": 1.5,
+    "8": 2.0,
+  };
+  return Math.ceil(modelSizeGb * (quantMultipliers[quantLevel] || 1.0));
+}
+
+function extractModelSizeFromPath(modelPath: string): number | undefined {
+  const sizeMatch = modelPath.match(/(\d+)[bB]/);
+  if (sizeMatch?.[1]) {
+    return parseInt(sizeMatch[1], 10);
+  }
   return undefined;
 }

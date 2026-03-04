@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "pnpm test:db:setup && pnpm -r test",
+    "smoke": "pnpm exec tsx scripts/smoke.ts --all",
+    "smoke:api": "pnpm exec tsx scripts/smoke.ts --api",
+    "smoke:ui": "pnpm exec tsx scripts/smoke.ts --ui",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint .",
@@ -36,6 +39,7 @@
     "eslint": "^10.0.2",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "prettier": "^3.8.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },

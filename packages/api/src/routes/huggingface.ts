@@ -3,6 +3,8 @@ import { hfCache } from "@sharellama/database";
 import type { Env } from "../env";
 import { getConfig } from "../env";
 import { getDb } from "../lib/db";
+import { extractAvatarFromHfHtml, HF_AVATAR_PLACEHOLDER } from "../lib/huggingfaceAvatar";
+import { logError } from "../lib/logging";
 
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -91,9 +93,10 @@ function extractProvider(repoId: string): string {
 
 const orgAvatarCache = new Map<string, string>();
 
-async function fetchOrgAvatar(org: string): Promise<string | undefined> {
-  if (orgAvatarCache.has(org)) {
-    return orgAvatarCache.get(org);
+async function fetchOrgAvatar(org: string): Promise<string> {
+  const orgKey = org.toLowerCase();
+  if (orgAvatarCache.has(orgKey)) {
+    return orgAvatarCache.get(orgKey)!;
   }
 
   try {
@@ -101,22 +104,18 @@ async function fetchOrgAvatar(org: string): Promise<string | undefined> {
       signal: AbortSignal.timeout(3000),
     });
 
-    if (!response.ok) return undefined;
-
-    const html = await response.text();
-    const match = html.match(
-      /avatarUrl&quot;:&quot;(https:\/\/cdn-avatars\.huggingface\.co[^"&]+)&quot;/,
-    );
-
-    if (match && match[1]) {
-      const avatarUrl = match[1];
-      orgAvatarCache.set(org, avatarUrl);
-      return avatarUrl;
+    if (!response.ok) {
+      orgAvatarCache.set(orgKey, HF_AVATAR_PLACEHOLDER);
+      return HF_AVATAR_PLACEHOLDER;
     }
 
-    return undefined;
+    const html = await response.text();
+    const avatarUrl = extractAvatarFromHfHtml(html) ?? HF_AVATAR_PLACEHOLDER;
+    orgAvatarCache.set(orgKey, avatarUrl);
+    return avatarUrl;
   } catch {
-    return undefined;
+    orgAvatarCache.set(orgKey, HF_AVATAR_PLACEHOLDER);
+    return HF_AVATAR_PLACEHOLDER;
   }
 }
 
@@ -181,7 +180,7 @@ app.get("/trending", async (c) => {
 
     return c.redirect("/hf/top-liked");
   } catch (error) {
-    console.error("HF trending error:", error);
+    logError("HF trending fetch failed", { error });
     return c.redirect("/hf/top-liked");
   }
 });
@@ -202,7 +201,7 @@ app.get("/top-liked", async (c) => {
 
     return c.json({ models: data, source: "top-liked" });
   } catch (error) {
-    console.error("HF top-liked error:", error);
+    logError("HF top-liked fetch failed", { error });
     return c.json({ error: "Unable to fetch models" }, 502);
   }
 });

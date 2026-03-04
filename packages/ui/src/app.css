@@ -1874,6 +1874,82 @@ h6 {
   padding: 4rem 2rem;
 }
 
+.global-nav-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 58%),
+    rgba(3, 6, 13, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.loading-state {
+  color: var(--color-text-muted);
+  padding: 3rem 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-state--graphic {
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(180deg, var(--color-bg-secondary) 0%, color-mix(in srgb, var(--color-bg) 84%, var(--color-accent) 16%) 100%);
+  box-shadow: 0 14px 30px -24px var(--color-accent-glow);
+}
+
+.loading-state-label {
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+
+.loading-orb {
+  width: 3.75rem;
+  height: 3.75rem;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--color-accent) 40%, transparent), transparent 56%),
+    color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-accent) 28%);
+}
+
+.loading-orb-ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 2px solid transparent;
+}
+
+.loading-orb-ring--outer {
+  inset: 0;
+  border-top-color: var(--color-accent);
+  border-right-color: var(--color-accent-light);
+  animation: spin 1.2s linear infinite;
+}
+
+.loading-orb-ring--inner {
+  inset: 0.5rem;
+  border-bottom-color: var(--color-gray-700);
+  border-left-color: var(--color-gray-700);
+  animation: spin 0.9s linear infinite reverse;
+  opacity: 0.95;
+}
+
+.loading-orb-icon {
+  color: var(--color-text);
+}
+
 /* Fade-in animation for content */
 .fade-in-content {
   animation: fadeIn 0.3s ease-out;

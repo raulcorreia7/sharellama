@@ -11,6 +11,7 @@ import { SearchBar } from "../components/SearchBar";
 import { SubmissionCard } from "../components/SubmissionCard";
 import { api, DEFAULT_SUBMISSIONS } from "../lib/api";
 import { formatDownloads, formatModelName, getTrendingModels } from "../lib/huggingface";
+import { markModelNavigationTransition } from "../lib/modelNavigation";
 import { useResourceWithDefault } from "../lib/useResourceWithDefault";
 
 export default function Index() {
@@ -90,7 +91,11 @@ export default function Index() {
           <div class="popular-models-grid">
             <For each={trendingModels()!.slice(0, 6)}>
               {(model) => (
-                <A href={`/models/${model.id}`} class="card card--hover popular-model-card">
+                <A
+                  href={`/models/${model.id}`}
+                  class="card card--hover popular-model-card"
+                  onClick={markModelNavigationTransition}
+                >
                   <div class="popular-model-header">
                     <Show when={model.authorAvatar}>
                       <img
